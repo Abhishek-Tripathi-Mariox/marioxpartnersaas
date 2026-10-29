@@ -98,4 +98,40 @@ src/
 
 ## Deploy
 
-Works on Vercel, Netlify (Next.js runtime) or any Node host (`npm run build && npm start`). Use MongoDB Atlas for the database, and set all variables from `.env.example` in the host's environment settings.
+### On a server (EC2 / any VPS) with PM2
+
+**Never run `npm run dev` on a server.** Dev mode compiles each page on first visit, uses several
+times the CPU and RAM, and is what makes pages hang on "loading" and PM2 restart the app.
+
+```bash
+# one time: Node 20+, and MongoDB reachable from the server (local mongod or Atlas)
+git pull                           # or copy the project
+cp .env.example .env.local         # fill in the values below
+npm ci
+npm run seed -- --admin-only       # first deploy only: creates the admin login
+npm run build
+pm2 delete my-app                  # remove an old dev-mode process if there is one
+pm2 start ecosystem.config.cjs
+pm2 save && pm2 startup            # restart on reboot
+```
+
+After every code update: `git pull && npm ci && npm run build && pm2 reload mariox-partners`.
+
+`.env.local` on the server:
+
+| Variable | Value |
+|---|---|
+| `MONGODB_URI` | e.g. `mongodb://127.0.0.1:27017/mariox` or your Atlas URI (allow the server IP in Atlas) |
+| `JWT_SECRET` | `openssl rand -hex 32` |
+| `MAIN_SITE_API_KEY` | secret shared with the main website |
+| `APP_URL` | the public URL, e.g. `http://13.x.x.x:3000` or `https://partners.mariox.in` |
+| `COOKIE_SECURE` | optional; defaults to `true` only when `APP_URL` starts with `https://` |
+
+**Check it:** open `APP_URL/api/health`. You should see `"ok":true,"db":"up"`. If it says
+`"db":"down"`, MongoDB is not reachable with that `MONGODB_URI`; anything `false` is a missing setting.
+
+Logs: `pm2 logs mariox-partners`.
+
+### Elsewhere
+
+Works on Vercel, Netlify (Next.js runtime) or any Node host. Set the same variables in the host's environment settings.

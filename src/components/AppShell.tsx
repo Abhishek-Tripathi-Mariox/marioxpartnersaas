@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/lib/client';
 import { prefetchApi } from '@/hooks/useApi';
-import { Icon, ToastProvider, initials } from './ui';
+import { Icon, ToastProvider, initials, useToast } from './ui';
 import { UserProvider, useUser } from './UserProvider';
 import { SettingsProvider } from './SettingsProvider';
 import { isActive, type NavItem } from './nav';
@@ -109,6 +109,24 @@ function TabBar({ nav, tabs }: { nav: NavItem[]; tabs: string[] }) {
   );
 }
 
+// Shows API failures (server down, DB unreachable…) as a toast, at most once every few seconds.
+function ApiErrors() {
+  const toast = useToast();
+  useEffect(() => {
+    let last = '', at = 0;
+    const on = (e: Event) => {
+      const msg = (e as CustomEvent<string>).detail || 'Request failed';
+      if (msg === last && Date.now() - at < 8000) return;
+      last = msg;
+      at = Date.now();
+      toast(`Could not load data: ${msg}`, true);
+    };
+    window.addEventListener('mariox-api-error', on);
+    return () => window.removeEventListener('mariox-api-error', on);
+  }, [toast]);
+  return null;
+}
+
 function Shell({ nav, tabs, home, subtitle, menu, children }: ShellProps & { children: ReactNode }) {
   return (
     <>
@@ -131,6 +149,7 @@ function Shell({ nav, tabs, home, subtitle, menu, children }: ShellProps & { chi
         <section className="view">{children}</section>
       </main>
       <TabBar nav={nav} tabs={tabs} />
+      <ApiErrors />
     </>
   );
 }

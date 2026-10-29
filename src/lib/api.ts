@@ -68,6 +68,11 @@ export function handle(fn: (req: Request, params: Record<string, string>) => Pro
       }
       if ((e as { code?: number }).code === 11000) return ok({ error: 'Already exists' }, 409);
       if ((e as Error).name === 'CastError') return ok({ error: 'Not found' }, 404);
+      const err = e as Error;
+      if (err.name === 'MongooseServerSelectionError' || err.message?.includes('MONGODB_URI')) {
+        console.error('[db]', err.message);
+        return ok({ error: `Database unreachable: ${err.message}. Check MONGODB_URI and that MongoDB is running (see /api/health).` }, 503);
+      }
       console.error(e);
       return ok({ error: 'Server error' }, 500);
     }

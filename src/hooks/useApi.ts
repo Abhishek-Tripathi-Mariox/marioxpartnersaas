@@ -53,6 +53,8 @@ export function useApi<T>(url: string | null) {
       }
     } catch (e) {
       if (current.current === url) setError((e as Error).message);
+      // Let the app shell show it, instead of a page that stays on its loading skeleton.
+      window.dispatchEvent(new CustomEvent('mariox-api-error', { detail: (e as Error).message }));
     } finally {
       if (current.current === url) setLoading(false);
     }
