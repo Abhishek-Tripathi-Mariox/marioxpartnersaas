@@ -12,7 +12,10 @@ module.exports = {
       instances: 1,
       exec_mode: 'fork',
       env: { NODE_ENV: 'production' },
-      max_memory_restart: '600M', // restart cleanly instead of being killed when the box runs out of RAM
+      // Sized for a 1 GB instance (t2/t3.micro) that also runs MongoDB: cap the heap and restart
+      // cleanly before the kernel's OOM killer does. Raise both on a bigger machine.
+      node_args: '--max-old-space-size=384',
+      max_memory_restart: '450M',
       time: true,
     },
   ],
