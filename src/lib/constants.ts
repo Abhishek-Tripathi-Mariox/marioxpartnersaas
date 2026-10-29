@@ -5,12 +5,23 @@ export const ACTIVITY_TYPES = ['call', 'meeting', 'email', 'note', 'stage', 'tas
 export const PROJECT_STAGES = ['Discovery', 'UI/UX design', 'Development', 'QA & UAT', 'Go-live'];
 export const PAYMENT_STATUS = ['upcoming', 'due', 'received'];
 
-export const OFFICES = ['Noida', 'Bangalore', 'Mumbai'];
+// Office name → short description shown on the booking tiles (same as the original portal).
+export const OFFICE_INFO: Record<string, string> = { Noida: 'Head office · seats up to 12', Bangalore: 'South India office · seats up to 8' };
+export const OFFICES = Object.keys(OFFICE_INFO);
 export const SLOTS = ['10:00', '11:30', '13:00', '14:30', '16:00', '17:30'];
 export const VISIT_PURPOSES = ['Client pitch', 'Solution demo', 'Contract signing', 'Project review'];
 export const TEAMS = ['No Mariox team needed', 'Business Analyst (BA)', 'Project Manager', 'Tech Lead', 'Solution Architect', 'UI/UX Designer', 'Sales Head'];
-export const TECH_TYPES = ['Pre-sales call', 'Live demo', 'Technical scoping', 'Proposal review', 'Join office meeting'];
-export const MEET_MODES = ['Google Meet', 'Zoom', 'Phone', 'In person'];
+export const TECH_INFO = [
+  { k: 'Pre-sales call', d: 'Join a call to answer the client’s technical questions', i: 'phone' },
+  { k: 'Live demo', d: 'Walk the client through relevant Mariox products', i: 'monitor' },
+  { k: 'Technical scoping', d: 'Architect estimates effort and approach', i: 'target' },
+  { k: 'Proposal review', d: 'Review your proposal before it goes out', i: 'fileCheck' },
+  { k: 'Join office meeting', d: 'Tech lead attends an in-person meeting', i: 'building' },
+] as const;
+export const TECH_TYPES = TECH_INFO.map(t => t.k);
+// 10:00–18:00 IST in 30-minute steps.
+export const TIMES = Array.from({ length: 17 }, (_, i) => `${String(10 + Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
+export const MEET_MODES = ['Google Meet', 'Zoom', 'Mariox office'];
 export const DURATIONS = ['30 min', '45 min', '60 min', '90 min'];
 export const TICKET_CATS = ['Commission & payout', 'Project delivery', 'Scope & pricing', 'Sales resources', 'Other'];
 export const RESOURCE_TYPES = ['Case study', 'Portfolio', 'Deck', 'Brochure'];

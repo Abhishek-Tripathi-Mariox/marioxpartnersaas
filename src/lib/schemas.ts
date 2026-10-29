@@ -62,6 +62,8 @@ export const requestCreate = {
     project: z.string().min(1),
     needs: str,
     lines: z.array(z.object({ name: z.string(), amount: z.coerce.number().min(0) })).default([]),
+    // From POST /api/uploads; the route checks each file belongs to the submitter.
+    attachments: z.array(z.object({ fileId: z.string(), name: z.string(), size: z.number(), type: z.string() })).max(10).default([]),
   }),
   booking: z.object({
     client: z.string().min(1),

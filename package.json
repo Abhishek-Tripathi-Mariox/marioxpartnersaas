@@ -8,6 +8,7 @@
     "build": "next build",
     "start": "next start",
     "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "seed:admin": "tsx --env-file=.env.local scripts/seed-admin.ts",
     "migrate": "tsx --env-file=.env.local scripts/migrate-stages.ts"
   },
   "dependencies": {

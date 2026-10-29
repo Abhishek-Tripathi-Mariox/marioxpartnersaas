@@ -15,6 +15,8 @@ export const Scope =
         project: { type: String, required: true },
         needs: String,
         lines: [{ name: String, amount: Number }],
+        // `type` must be wrapped: a bare `type: String` would make Mongoose treat the whole object as a String.
+        attachments: [{ _id: false, fileId: String, name: String, size: Number, type: { type: String } }],
         submitted: { type: Number, default: 0 },
         approved: Number,
         status: { type: String, default: 'review' },

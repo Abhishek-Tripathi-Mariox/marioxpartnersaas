@@ -35,6 +35,8 @@ export const POST = handle(async req => {
     ...data,
     stage,
     owner,
+    // Like the original portal: every new lead starts with a first call tomorrow.
+    tasks: [{ text: 'First call', due: new Date(Date.now() + 864e5).toISOString().slice(0, 10), done: false }],
     activities: [{ type: 'note', text: s.role === 'admin' ? 'Lead created by Mariox' : 'Lead created', date: today() }],
   });
   return ok({ lead }, 201);

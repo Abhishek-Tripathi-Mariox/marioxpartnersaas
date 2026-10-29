@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { DynamicForm } from '@/components/forms/DynamicForm';
 import { useUser } from '@/components/UserProvider';
-import { Button, Card, Chips, DataTable, EmptyState, Modal, PageHeader, Pagination, SearchInput, SkeletonCards, StatusBadge, useToast, type Column } from '@/components/ui';
+import { Button, Card, Chips, DataTable, Drawer, EmptyState, Modal, PageHeader, Pagination, SearchInput, SkeletonCards, StatusBadge, useToast, type Column } from '@/components/ui';
 import { useList } from '@/hooks/useList';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { api } from '@/lib/client';
@@ -12,6 +12,10 @@ import { date } from '@/lib/format';
 import type { OwnerRef, RequestItem } from '@/types';
 import { REQUESTS, type RequestKind } from './config';
 import { ScopeCard } from './ScopeCard';
+import { TechForm } from './TechForm';
+import { VisitBooking } from './VisitBooking';
+import { SCOPE_FORM_ID, ScopeForm } from './ScopeForm';
+import { ScopeDetails } from './ScopeCard';
 import { ToolkitNav } from './ToolkitNav';
 
 type Props = { kind: RequestKind; admin?: boolean; embedded?: boolean; above?: ReactNode; initialStatus?: string };
@@ -26,6 +30,7 @@ export function RequestsView({ kind, admin, embedded, above, initialStatus }: Pr
   const { items, loading, reload } = list;
   const [creating, setCreating] = useState(false);
   const [reviewing, setReviewing] = useState<RequestItem | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   useQueryFlag('new', () => setCreating(true));
 
   async function create(values: Record<string, unknown>) {
@@ -40,6 +45,16 @@ export function RequestsView({ kind, admin, embedded, above, initialStatus }: Pr
     setReviewing(null);
     toast('Updated');
     reload();
+  }
+
+  async function acceptRevised(s: RequestItem) {
+    try {
+      await api.patch(`/api/requests/scope/${s._id}`, { accept: true });
+      toast('Revised amount accepted. You can quote the client now.');
+      reload();
+    } catch (e) {
+      toast((e as Error).message, true);
+    }
   }
 
   async function remove() {
@@ -88,6 +103,7 @@ export function RequestsView({ kind, admin, embedded, above, initialStatus }: Pr
               onSubmit={review}
               onCancel={() => setReviewing(null)}
             />
+            {kind === 'scope' && <ScopeDetails s={reviewing} />}
             <div style={{ borderTop: '1px solid var(--line)', marginTop: 18, paddingTop: 14 }}>
               <Button size="sm" variant="danger" icon="trash" onClick={remove}>Delete this request</Button>
             </div>
@@ -107,55 +123,82 @@ export function RequestsView({ kind, admin, embedded, above, initialStatus }: Pr
         <ToolkitNav />
         {toolbar}
         <div className="stack">
-          {loading && !items ? <SkeletonCards /> : items?.length ? items.map(s => <ScopeCard key={s._id} s={s} rate={user?.commissionRate ?? DEFAULT_COMMISSION_RATE} />) : <EmptyState title={list.filtered ? 'No submissions match your filters.' : cfg.empty} />}
+          {loading && !items ? <SkeletonCards /> : items?.length ? items.map(s => <ScopeCard key={s._id} s={s} rate={user?.commissionRate ?? DEFAULT_COMMISSION_RATE} onAccept={() => acceptRevised(s)} />) : <EmptyState title={list.filtered ? 'No submissions match your filters.' : cfg.empty} />}
         </div>
         {pager}
-        <Modal open={creating} title={cfg.formTitle} onClose={() => setCreating(false)} wide>
-          <DynamicForm fields={cfg.fields} submitLabel={cfg.submitLabel} onSubmit={create} onCancel={() => setCreating(false)} />
-        </Modal>
+        <Drawer
+          open={creating}
+          title={cfg.formTitle}
+          subtitle="Mariox usually responds within 2 working days."
+          onClose={() => setCreating(false)}
+          footer={
+            <>
+              <Button variant="ghost" onClick={() => setCreating(false)}>Cancel</Button>
+              <Button variant="fire" icon="send" type="submit" form={SCOPE_FORM_ID} loading={submitting}>{cfg.submitLabel}</Button>
+            </>
+          }
+        >
+          <ScopeForm rate={user?.commissionRate ?? DEFAULT_COMMISSION_RATE} onSubmit={create} onBusy={setSubmitting} />
+        </Drawer>
       </>
     );
   }
 
-  // Visits, tech and tickets: form on the left, the partner's own requests on the right.
+  // The partner's own requests, newest first (right-hand column).
+  const listCard = (
+    <Card title={cfg.listTitle} subtitle={list.meta ? `${list.meta.total} total` : undefined} className={kind === 'booking' ? undefined : 'stick'}>
+      <div style={{ marginBottom: 6 }}><SearchInput value={list.q} onChange={list.setQ} placeholder="Search" width="100%" /></div>
+      {loading && !items ? (
+        <SkeletonCards count={2} height={70} />
+      ) : items?.length ? (
+        items.map(r => {
+          const it = cfg.item(r);
+          return (
+            <div key={r._id} className="li" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 5 }}>
+              <div className="between" style={{ alignItems: 'flex-start' }}>
+                <b className="li-t">{it.title}</b>
+                <StatusBadge status={r.status} />
+              </div>
+              <div className="sub">{it.sub}</div>
+              {it.detail && <div className="sub" style={{ color: 'var(--ink-2)' }}>{it.detail}</div>}
+            </div>
+          );
+        })
+      ) : (
+        <div className="empty">{list.filtered ? 'Nothing matches your search.' : cfg.empty}</div>
+      )}
+      {list.meta && list.meta.pages > 1 && (
+        <div className="between" style={{ paddingTop: 12, borderTop: '1px solid var(--line)' }}>
+          <Button size="xs" icon="chevL" disabled={list.page <= 1} onClick={() => list.setPage(list.page - 1)}>Newer</Button>
+          <span className="sub mono">{list.page} / {list.meta.pages}</span>
+          <Button size="xs" disabled={list.page >= list.meta.pages} onClick={() => list.setPage(list.page + 1)}>Older</Button>
+        </div>
+      )}
+    </Card>
+  );
+
+  // Office visits: the original step-by-step booking screen with a live summary.
+  if (kind === 'booking') {
+    return (
+      <>
+        <PageHeader eyebrow={cfg.eyebrow} title={cfg.title} subtitle={cfg.subtitle} />
+        <ToolkitNav />
+        <VisitBooking onSubmit={create} list={listCard} />
+      </>
+    );
+  }
+
+  // Tech requests and tickets: form on the left, the partner's own requests on the right.
   return (
     <>
       <PageHeader eyebrow={cfg.eyebrow} title={cfg.title} subtitle={cfg.subtitle} />
       {isToolkit && <ToolkitNav />}
       {above}
       <div className="split">
-        <Card title={cfg.formTitle}>
-          <DynamicForm key={String(creating)} fields={cfg.fields} submitLabel={cfg.submitLabel} onSubmit={create} resetOnSubmit />
+        <Card title={kind === 'tech' ? undefined : cfg.formTitle} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+          {kind === 'tech' ? <TechForm onSubmit={create} /> : <DynamicForm key={String(creating)} fields={cfg.fields} submitLabel={cfg.submitLabel} onSubmit={create} resetOnSubmit />}
         </Card>
-        <Card title={cfg.listTitle} subtitle={list.meta ? `${list.meta.total} total` : undefined} className="stick">
-          <div style={{ marginBottom: 6 }}><SearchInput value={list.q} onChange={list.setQ} placeholder="Search" width="100%" /></div>
-          {loading && !items ? (
-            <SkeletonCards count={2} height={70} />
-          ) : items?.length ? (
-            items.map(r => {
-              const it = cfg.item(r);
-              return (
-                <div key={r._id} className="li" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 5 }}>
-                  <div className="between" style={{ alignItems: 'flex-start' }}>
-                    <b className="li-t">{it.title}</b>
-                    <StatusBadge status={r.status} />
-                  </div>
-                  <div className="sub">{it.sub}</div>
-                  {it.detail && <div className="sub" style={{ color: 'var(--ink-2)' }}>{it.detail}</div>}
-                </div>
-              );
-            })
-          ) : (
-            <div className="empty">{list.filtered ? 'Nothing matches your search.' : cfg.empty}</div>
-          )}
-          {list.meta && list.meta.pages > 1 && (
-            <div className="between" style={{ paddingTop: 12, borderTop: '1px solid var(--line)' }}>
-              <Button size="xs" icon="chevL" disabled={list.page <= 1} onClick={() => list.setPage(list.page - 1)}>Newer</Button>
-              <span className="sub mono">{list.page} / {list.meta.pages}</span>
-              <Button size="xs" disabled={list.page >= list.meta.pages} onClick={() => list.setPage(list.page + 1)}>Older</Button>
-            </div>
-          )}
-        </Card>
+        {listCard}
       </div>
     </>
   );

@@ -4,15 +4,16 @@ import type { PipelineConfig } from '@/lib/pipeline';
 // Lead form fields; source and priority options come from the admin's pipeline settings.
 export function leadFields(cfg: PipelineConfig): FieldDef[] {
   return [
-    { name: 'company', label: 'Company', required: true },
-    { name: 'project', label: 'Project', placeholder: 'e.g. Dealer portal' },
-    { name: 'value', label: 'Deal value (₹)', type: 'number' },
-    { name: 'contact', label: 'Contact person', placeholder: 'Rahul Bose, CTO', hint: 'Name, then a comma and their designation' },
-    { name: 'phone', label: 'Phone', type: 'tel' },
-    { name: 'email', label: 'Email', type: 'email' },
-    { name: 'city', label: 'City' },
+    // Same fields and wording as the original "New lead" form.
+    { name: 'company', label: 'Company *', placeholder: 'e.g. Apex Motors', required: true, full: true },
+    { name: 'project', label: 'Requirement', placeholder: 'e.g. Dealer portal' },
+    { name: 'contact', label: 'Contact person', placeholder: 'Name, designation' },
+    { name: 'phone', label: 'Phone', type: 'tel', placeholder: '+91' },
+    { name: 'email', label: 'Email', type: 'email', placeholder: 'name@company.com' },
+    { name: 'value', label: 'Estimated value (₹)', type: 'number', placeholder: '800000' },
     { name: 'expectedClose', label: 'Expected close', type: 'date' },
-    { name: 'source', label: 'Source', type: 'chips', options: cfg.sources },
-    { name: 'priority', label: 'Priority', type: 'chips', options: cfg.priorities.map(p => p.name) },
+    { name: 'source', label: 'Source', type: 'select', options: cfg.sources },
+    { name: 'priority', label: 'Priority', type: 'select', options: cfg.priorities.map(p => p.name) },
+    { name: 'city', label: 'City', placeholder: 'e.g. Noida' },
   ];
 }

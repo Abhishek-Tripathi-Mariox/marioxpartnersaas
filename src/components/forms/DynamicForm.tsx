@@ -1,6 +1,6 @@
 'use client';
 
-import { Button, Chips, FormError, Input, Select, Textarea, Toggle } from '@/components/ui';
+import { Button, Chips, FormError, Input, Select, Textarea, Toggle, type IconName } from '@/components/ui';
 import { useForm } from '@/hooks/useForm';
 import { inr } from '@/lib/format';
 
@@ -60,12 +60,14 @@ type Props = {
   onSubmit: (values: Values) => Promise<unknown>;
   onCancel?: () => void;
   resetOnSubmit?: boolean;
+  submitIcon?: IconName;
+  columns?: number;        // fixed column count instead of auto-fit (e.g. 2 in narrow modals)
   // Display label per option value, e.g. { owner: id => partnerName(id) } for selects of ids.
   optionLabel?: Record<string, (value: string) => string>;
 };
 
 // Renders any form from a field list. Used for leads, requests, kit files, partners and profile.
-export function DynamicForm({ fields, initial, submitLabel = 'Save', onSubmit, onCancel, resetOnSubmit, optionLabel }: Props) {
+export function DynamicForm({ fields, initial, submitLabel = 'Save', onSubmit, onCancel, resetOnSubmit, optionLabel, submitIcon = 'send', columns }: Props) {
   const form = useForm<Values>(initialValues(fields, initial));
   const opts = (f: FieldDef) => (f.options || []).map(o => ({ value: o, label: optionLabel?.[f.name]?.(o) ?? o }));
   const full = (f: FieldDef) => f.full || ['textarea', 'lines', 'chips', 'checkbox'].includes(f.type ?? '');
@@ -79,7 +81,7 @@ export function DynamicForm({ fields, initial, submitLabel = 'Save', onSubmit, o
         if (resetOnSubmit) form.reset();
       })}
     >
-      <div className="grid-f">
+      <div className="grid-f" style={columns ? { gridTemplateColumns: `repeat(${columns},minmax(0,1fr))`, gap: 12 } : undefined}>
         {fields.map(f => {
           const common = { label: f.label, required: f.required, placeholder: f.placeholder, hint: f.hint };
           const value = form.values[f.name];
@@ -127,7 +129,7 @@ export function DynamicForm({ fields, initial, submitLabel = 'Save', onSubmit, o
       <FormError error={form.error} />
       <div className="form-foot">
         {onCancel && <Button type="button" variant="ghost" onClick={onCancel}>Cancel</Button>}
-        <Button variant="fire" icon="send" loading={form.busy}>{submitLabel}</Button>
+        <Button variant="fire" icon={submitIcon} loading={form.busy}>{submitLabel}</Button>
       </div>
     </form>
   );

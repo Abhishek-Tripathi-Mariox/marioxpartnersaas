@@ -201,12 +201,14 @@ export function PipelineView({ admin, partnerId }: { admin?: boolean; partnerId?
         </div>
       )}
 
-      <Modal open={adding} title={admin ? 'Add lead for a partner' : 'Add lead'} onClose={() => setAdding(false)} wide>
+      <Modal open={adding} title={admin ? 'New lead for a partner' : 'New lead'} subtitle="A first call is scheduled for tomorrow automatically." onClose={() => setAdding(false)}>
         <DynamicForm
           fields={fields}
-          initial={partnerId ? { owner: partnerId } : undefined}
+          columns={2}
+          submitIcon="plus"
+          initial={{ priority: cfg.priorities.find(p => p.name === 'Warm')?.name ?? cfg.priorities[0]?.name, ...(partnerId ? { owner: partnerId } : {}) }}
           optionLabel={{ owner: id => partnerList.find(p => p.id === id)?.name ?? id }}
-          submitLabel="Add lead"
+          submitLabel="Save lead"
           onSubmit={create}
           onCancel={() => setAdding(false)}
         />

@@ -40,10 +40,7 @@
 .col.won .col-h .t { color: var(--good); }
 .col.lost .col-h .t { color: var(--bad); }
 
-/* full-width canvas: the original capped content at 1360px; the SaaS uses the whole screen */
-.top-in, .main { max-width: none; }
-.top { padding-inline: clamp(20px, 2.5vw, 48px); }
-.main { padding-inline: clamp(20px, 2.5vw, 48px); }
+/* Layout width comes from theme.css: content is centred at max 1360px, like the original portal. */
 
 /* list toolbar + pager */
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
@@ -150,3 +147,13 @@
 .announce .lbl { color: var(--accent); font-size: 10.5px; }
 .announce p { margin-top: 3px; font-size: 14.5px; line-height: 1.5; color: var(--ink); white-space: pre-line; }
 .announce .x { width: 30px; height: 30px; }
+
+/* attached files */
+.file-chip { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: var(--panel-2); box-shadow: 0 0 0 1px var(--line) inset; min-width: 0; }
+.file-chip a:hover .file-n { text-decoration: underline; }
+.file-ext { font: 600 10.5px var(--mono); padding: 4px 7px; border-radius: 7px; background: var(--accent-soft); color: var(--accent); flex-shrink: 0; }
+.file-n { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 500; }
+.scope-more summary { cursor: pointer; font-size: 13px; font-weight: 500; color: var(--muted); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+.scope-more summary::before { content: "▸"; transition: transform .2s; }
+.scope-more[open] summary::before { transform: rotate(90deg); }
+.scope-more summary::-webkit-details-marker { display: none; }

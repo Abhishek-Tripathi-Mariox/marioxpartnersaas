@@ -9,7 +9,8 @@ Each partner has their own login and sees only their own leads, projects, commis
 ```bash
 cp .env.example .env.local     # then set MONGODB_URI, JWT_SECRET, MAIN_SITE_API_KEY
 npm install
-npm run seed                   # admin + demo partner + sample data (or: npm run seed -- --admin-only)
+npm run seed                   # admin + demo partner + sample data
+npm run seed:admin             # OR only the admin account, no demo data
 npm run dev                    # http://localhost:3000
 ```
 
@@ -19,6 +20,17 @@ Seeded logins:
 |---------|--------------------------|--------------|
 | Admin   | admin@mariox.in          | Admin@12345  |
 | Partner | rohit@sharmadigital.in   | Partner@123  |
+
+## Admin account only
+
+```bash
+npm run seed:admin                                            # uses ADMIN_EMAIL / ADMIN_PASSWORD / ADMIN_NAME from .env.local
+npm run seed:admin -- admin@company.com 'StrongPass@1'        # or pass them directly
+npm run seed:admin -- admin@company.com 'StrongPass@1' "Name"
+```
+
+Creates the admin if it doesn't exist. If the email exists, it becomes an active admin with the new password
+(other sessions of that account are signed out). Leads, projects and partners are never touched.
 
 ## Creating users from the main website
 
@@ -108,7 +120,7 @@ times the CPU and RAM, and is what makes pages hang on "loading" and PM2 restart
 git pull                           # or copy the project
 cp .env.example .env.local         # fill in the values below
 npm ci
-npm run seed -- --admin-only       # first deploy only: creates the admin login
+npm run seed:admin                 # first deploy only: creates the admin login (no demo data)
 npm run build
 pm2 delete my-app                  # remove an old dev-mode process if there is one
 pm2 start ecosystem.config.cjs

@@ -3,7 +3,7 @@
 import { useRef, useState } from 'react';
 import { ProjectEditor, emptyProject, toValues } from '@/components/projects/ProjectEditor';
 import { ProjectList } from '@/components/projects/ProjectList';
-import { Button, Modal, PageHeader, useToast } from '@/components/ui';
+import { Button, Drawer, PageHeader, useToast } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { api } from '@/lib/client';
 import type { Project, User } from '@/types';
@@ -53,9 +53,9 @@ export default function AdminProjectsPage() {
         )}
       />
       {editing && (
-        <Modal open title={editing.id ? 'Edit project' : 'New project'} onClose={() => setEditing(null)} wide>
+        <Drawer open title={editing.id ? 'Edit project' : 'New project'} subtitle="Delivery stage, milestones and the client payment schedule." onClose={() => setEditing(null)}>
           <ProjectEditor initial={editing.values} partners={partners} onSubmit={save} onCancel={() => setEditing(null)} />
-        </Modal>
+        </Drawer>
       )}
     </>
   );

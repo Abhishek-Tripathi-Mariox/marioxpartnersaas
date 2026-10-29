@@ -4,6 +4,7 @@ import { Booking, Scope, TechRequest, Ticket } from '@/models/Requests';
 import { requestCreate } from './schemas';
 import { HttpError } from './api';
 import { nextCode } from './codes';
+import { openFile } from './files';
 
 type KindConfig = { model: Model<any>; create: ZodType<Record<string, unknown>> }; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -24,9 +25,14 @@ export function requestKind(kind: string): KindConfig {
 }
 
 // Extra fields filled in on create, per kind.
-export async function createDefaults(kind: string, data: Record<string, unknown>) {
+export async function createDefaults(kind: string, data: Record<string, unknown>, owner: string) {
   if (kind === 'scope') {
     const lines = (data.lines as { amount: number }[]) || [];
+    // Only files this partner uploaded can be attached.
+    for (const a of (data.attachments as { fileId: string }[]) || []) {
+      const { doc } = await openFile(a.fileId);
+      if (String(doc.metadata?.owner) !== owner) throw new HttpError(400, 'Attachment not found');
+    }
     return { submitted: lines.reduce((a, l) => a + (l.amount || 0), 0) };
   }
   if (kind === 'ticket') {

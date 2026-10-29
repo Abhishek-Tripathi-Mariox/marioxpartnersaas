@@ -29,6 +29,6 @@ export const POST = handle(async (req, { kind }) => {
   const s = await session();
   const { model, create } = requestKind(kind);
   const data = await body(req, create);
-  const item = await model.create({ ...data, ...(await createDefaults(kind, data)), owner: s.sub });
+  const item = await model.create({ ...data, ...(await createDefaults(kind, data, s.sub)), owner: s.sub });
   return ok({ item }, 201);
 });

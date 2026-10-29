@@ -4,6 +4,7 @@ export { Card, MoreLink, StatCard, Stats, InfoTip, Note, PageHeader, EmptyState,
 export { Badge, StatusBadge, statusTone, type Tone } from './Badge';
 export { DataTable, type Column } from './DataTable';
 export { Modal } from './Modal';
+export { Drawer } from './Drawer';
 export { Skeleton, SkeletonRows, SkeletonCards } from './Skeleton';
 export { Dropdown, SEARCH_THRESHOLD } from './Dropdown';
 export { Pagination, SearchInput } from './Pagination';
