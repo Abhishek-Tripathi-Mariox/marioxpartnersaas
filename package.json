@@ -1,0 +1,30 @@
+{
+  "name": "mariox-saas",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "dev:webpack": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "migrate": "tsx --env-file=.env.local scripts/migrate-stages.ts"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "jose": "^5.9.6",
+    "mongoose": "^8.9.5",
+    "next": "15.5.27",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.17.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
+  }
+}
