@@ -1,4 +1,4 @@
-import { FileChip, type Attachment } from '@/components/forms/FileUploader';
+import { AttachmentList, type Attachment } from '@/components/forms/FileUploader';
 import { Icon, StatusBadge } from '@/components/ui';
 import { date, inr } from '@/lib/format';
 import type { RequestItem } from '@/types';
@@ -39,6 +39,7 @@ export function ScopeCard({ s, rate, onAccept }: { s: RequestItem; rate: number;
         <details className="scope-more">
           <summary>
             {lines(s).length} scope item{lines(s).length === 1 ? '' : 's'} · {attachments(s).length} attachment{attachments(s).length === 1 ? '' : 's'}
+            {attachments(s).length > 0 && <AttachmentList files={attachments(s)} compact />}
           </summary>
           <ScopeDetails s={s} />
         </details>
@@ -80,7 +81,7 @@ export function ScopeDetails({ s }: { s: RequestItem }) {
       {files.length > 0 && (
         <div className="stack" style={{ gap: 8 }}>
           <span className="lbl">Attachments</span>
-          {files.map(f => <FileChip key={f.fileId} file={f} href={`/api/uploads/${f.fileId}`} />)}
+          <AttachmentList files={files} />
         </div>
       )}
     </div>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useState } from 'react';
-import { ProjectEditor, emptyProject, toValues } from '@/components/projects/ProjectEditor';
+import { ProjectEditor, emptyProject, toValues, type ProjectPayload } from '@/components/projects/ProjectEditor';
 import { ProjectList } from '@/components/projects/ProjectList';
 import { Button, Drawer, PageHeader, useToast } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
@@ -17,7 +17,7 @@ export default function AdminProjectsPage() {
   const [editing, setEditing] = useState<Editing | null>(null);
   const reload = useRef<() => void>(() => {});
 
-  async function save(v: Editing['values']) {
+  async function save(v: ProjectPayload) {
     // Drop empty optional strings so the API stores them as unset.
     const payload = { ...v, payments: v.payments.map(p => ({ ...p, releasedAt: p.releasedAt || undefined, utr: p.utr || undefined })) };
     if (editing?.id) await api.patch(`/api/projects/${editing.id}`, payload);

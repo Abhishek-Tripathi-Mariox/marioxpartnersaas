@@ -47,6 +47,7 @@ export const projectSchema = z.object({
   city: str,
   title: z.string().min(1),
   deal: num,
+  commissionRate: z.coerce.number().min(0).max(1).optional(),
   closedAt: str,
   stage: z.number().int().min(0).max(4).optional(),
   pm: str,
@@ -110,5 +111,6 @@ export const resourceSchema = z.object({
   format: str,
   size: str,
   url: str,
+  file: z.object({ fileId: z.string(), name: z.string(), size: z.number(), type: z.string() }).nullable().optional(),
   hidden: z.boolean().optional(),
 });

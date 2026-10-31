@@ -12,7 +12,9 @@ export const Resource =
         title: { type: String, required: true },
         format: String,
         size: String,
-        url: String,
+        url: String, // optional external link (used when no file is uploaded)
+        // Uploaded file on S3 (see models/File.ts). `type` is wrapped so Mongoose doesn't read it as the field type.
+        file: { _id: false, fileId: String, name: String, size: Number, type: { type: String } },
         hidden: { type: Boolean, default: false },
       },
       { timestamps: true },

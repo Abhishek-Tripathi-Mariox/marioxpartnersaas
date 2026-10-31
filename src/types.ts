@@ -68,6 +68,7 @@ export interface Project {
   city?: string;
   title: string;
   deal: number;
+  commissionRate?: number;   // this deal's rate; falls back to the partner's rate for old projects
   closedAt?: string;
   stage: number;
   pm?: string;
@@ -95,6 +96,7 @@ export interface Resource {
   format?: string;
   size?: string;
   url?: string;
+  file?: { fileId: string; name: string; size: number; type: string };
   hidden?: boolean;
 }
 

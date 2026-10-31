@@ -30,8 +30,8 @@ export async function createDefaults(kind: string, data: Record<string, unknown>
     const lines = (data.lines as { amount: number }[]) || [];
     // Only files this partner uploaded can be attached.
     for (const a of (data.attachments as { fileId: string }[]) || []) {
-      const { doc } = await openFile(a.fileId);
-      if (String(doc.metadata?.owner) !== owner) throw new HttpError(400, 'Attachment not found');
+      const f = await openFile(a.fileId);
+      if (String(f.owner) !== owner) throw new HttpError(400, 'Attachment not found');
     }
     return { submitted: lines.reduce((a, l) => a + (l.amount || 0), 0) };
   }

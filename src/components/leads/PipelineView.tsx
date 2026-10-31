@@ -65,14 +65,15 @@ export function PipelineView({ admin, partnerId }: { admin?: boolean; partnerId?
   function pick(p: PipelinePick) {
     if (p === 'tasks') return setView('tasks');
     setView('list');
-    list.setFilter('stage', p === 'closed' ? closedKeys : openKeys);
+    list.setFilter('stage', p === 'closed' ? closedKeys : p === 'commission' ? WON : openKeys);
     list.setSort(p === 'open' ? '-updatedAt' : '-value');
   }
   const picked: PipelinePick | null =
     view === 'tasks' ? 'tasks'
     : view !== 'list' ? null
     : list.filters.stage === closedKeys ? 'closed'
-    : list.filters.stage === openKeys ? (list.sort === '-value' ? 'weighted' : 'open')
+    : list.filters.stage === WON ? 'commission'
+    : list.filters.stage === openKeys ? 'open'
     : null;
 
   const owner = partnerId ?? list.filters.owner ?? '';
@@ -143,7 +144,7 @@ export function PipelineView({ admin, partnerId }: { admin?: boolean; partnerId?
         />
       )}
 
-      <PipelineStats s={pipeline(all, cfg)} rate={avgRate} followUps={pending.length} overdue={overdue} onPick={pick} active={picked} />
+      <PipelineStats s={pipeline(all, rateOf)} rateLabel={admin ? "each partner's" : `your ${Math.round(avgRate * 100)}%`} followUps={pending.length} overdue={overdue} onPick={pick} active={picked} />
 
       {view !== 'tasks' && (
         <div className="toolbar">

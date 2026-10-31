@@ -21,6 +21,9 @@ const ProjectSchema = new Schema(
     city: String,
     title: { type: String, required: true },
     deal: { type: Number, default: 0 },
+    // Commission share for THIS deal (0–1), locked when the project is created so a later change
+    // to the partner's default rate never rewrites commission already earned.
+    commissionRate: { type: Number, min: 0, max: 1 },
     closedAt: String,
     stage: { type: Number, default: 0, min: 0, max: 4 },
     pm: String,

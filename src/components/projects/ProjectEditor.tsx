@@ -6,20 +6,22 @@ import { PAYMENT_STATUS, PROJECT_STAGES } from '@/lib/constants';
 import { inr } from '@/lib/format';
 import type { OwnerRef, Payment, Project, User } from '@/types';
 
-type Values = Omit<Project, '_id' | 'owner'> & { owner: string };
+type Values = Omit<Project, '_id' | 'owner' | 'commissionRate'> & { owner: string; commissionPct: number | '' };
 
 const blankPayment = (): Payment => ({ label: '', amount: 0, due: '', status: 'upcoming' });
 
 export function emptyProject(): Values {
-  return { owner: '', client: '', title: '', deal: 0, stage: 0, pm: '', update: '', closedAt: '', contact: '', city: '', milestones: PROJECT_STAGES.map(() => ''), payments: [blankPayment()] };
+  return { owner: '', commissionPct: '', client: '', title: '', deal: 0, stage: 0, pm: '', update: '', closedAt: '', contact: '', city: '', milestones: PROJECT_STAGES.map(() => ''), payments: [blankPayment()] };
 }
 
 export function toValues(p: Project): Values {
   const owner = typeof p.owner === 'object' ? (p.owner as OwnerRef)._id : p.owner;
-  return { ...p, owner, milestones: PROJECT_STAGES.map((_, i) => p.milestones?.[i] || '') };
+  const rate = p.commissionRate ?? (typeof p.owner === 'object' ? (p.owner as OwnerRef).commissionRate : undefined);
+  return { ...p, owner, commissionPct: rate != null ? Math.round(rate * 1000) / 10 : '', milestones: PROJECT_STAGES.map((_, i) => p.milestones?.[i] || '') };
 }
 
-type Props = { initial: Values; partners: User[]; onSubmit: (v: Values) => Promise<unknown>; onCancel: () => void };
+export type ProjectPayload = Omit<Values, 'commissionPct'> & { commissionRate?: number };
+type Props = { initial: Values; partners: User[]; onSubmit: (v: ProjectPayload) => Promise<unknown>; onCancel: () => void };
 
 // Admin form for a delivery project: details, per-stage milestone dates and the client payment schedule.
 export function ProjectEditor({ initial, partners, onSubmit, onCancel }: Props) {
@@ -30,9 +32,26 @@ export function ProjectEditor({ initial, partners, onSubmit, onCancel }: Props) 
   const scheduled = v.payments.reduce((a, p) => a + (Number(p.amount) || 0), 0);
 
   return (
-    <form className="stack" onSubmit={form.submit(onSubmit)}>
+    <form
+      className="stack"
+      onSubmit={form.submit(({ commissionPct, ...rest }) =>
+        onSubmit({ ...rest, ...(commissionPct === '' ? {} : { commissionRate: Number(commissionPct) / 100 }) }),
+      )}
+    >
       <div className="grid-f">
-        <Select label="Partner" required placeholder="Choose partner" options={partners.map(p => ({ value: p.id, label: `${p.name} (${p.partnerCode})` }))} {...form.bind('owner')} />
+        <Select
+          label="Partner"
+          required
+          placeholder="Choose partner"
+          options={partners.map(p => ({ value: p.id, label: `${p.name} (${p.partnerCode}) · ${Math.round(p.commissionRate * 100)}%` }))}
+          value={v.owner}
+          onChange={e => {
+            const p = partners.find(x => x.id === e.target.value);
+            // New deal: start from the partner's current rate; it can still be changed for this deal.
+            form.setValues(prev => ({ ...prev, owner: e.target.value, commissionPct: prev.commissionPct === '' && p ? Math.round(p.commissionRate * 100) : prev.commissionPct }));
+          }}
+        />
+        <Input label="Commission for this deal (%)" type="number" min={0} max={100} step="0.1" hint="Locked to this project; changing the partner's default rate later won't change it" value={v.commissionPct} onChange={e => set('commissionPct', e.target.value === '' ? '' : Number(e.target.value))} />
         <Input label="Client" required {...form.bind('client')} />
         <Input label="Project" required {...form.bind('title')} />
         <Input label="Deal value (₹)" type="number" min={0} {...form.bind('deal')} />

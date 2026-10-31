@@ -3,7 +3,6 @@
 import { DynamicForm, type FieldDef } from '@/components/forms/DynamicForm';
 import { VisitingCard } from '@/components/PartnerCard';
 import { useUser } from '@/components/UserProvider';
-import { usePipeline } from '@/components/SettingsProvider';
 import { AppearanceCard, PasswordCard, SessionsCard } from '@/components/account/SecurityCard';
 import { Card, Icon, Note, PageHeader, Tabs, useToast } from '@/components/ui';
 import { useAccountTab } from '@/hooks/useAccountTab';
@@ -29,14 +28,13 @@ const FIELDS: FieldDef[] = [
 export default function ProfilePage() {
   const { user, reload } = useUser();
   const toast = useToast();
-  const cfg = usePipeline();
   const [tab, setTab] = useAccountTab();
   const leads = useApi<{ leads: Lead[] }>('/api/leads');
   const projects = useApi<{ projects: Project[] }>('/api/projects');
   if (!user) return null;
 
   const m = earnings(projects.data?.projects ?? [], user.commissionRate);
-  const p = pipeline(leads.data?.leads ?? [], cfg);
+  const p = pipeline(leads.data?.leads ?? [], user.commissionRate);
 
   return (
     <>

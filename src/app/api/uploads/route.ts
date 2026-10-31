@@ -1,7 +1,7 @@
 import { handle, session, ok, HttpError } from '@/lib/api';
 import { saveFile } from '@/lib/files';
 
-// POST /api/uploads  (multipart/form-data, field "files", one or more)
+// POST /api/uploads  (multipart/form-data, field "files", one or more, max 15 MB each) → stored on S3
 // Returns [{ fileId, name, size, type }] to attach to a request (e.g. a scope submission).
 export const POST = handle(async req => {
   const s = await session();

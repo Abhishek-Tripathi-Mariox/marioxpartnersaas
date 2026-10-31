@@ -1,5 +1,6 @@
 import { handle, session, admin, body, ok } from '@/lib/api';
 import { eq, runList, type ListSpec } from '@/lib/list';
+import { openFile, setShared } from '@/lib/files';
 import { resourceSchema } from '@/lib/schemas';
 import { Resource } from '@/models/Content';
 
@@ -18,5 +19,9 @@ export const GET = handle(async req => {
 
 export const POST = handle(async req => {
   await admin();
-  return ok({ item: await Resource.create(await body(req, resourceSchema)) }, 201);
+  const data = await body(req, resourceSchema);
+  if (data.file) await openFile(data.file.fileId); // must exist
+  const item = await Resource.create({ ...data, file: data.file ?? undefined });
+  await setShared(item.file?.fileId, !item.hidden); // visible kit files are readable by every partner
+  return ok({ item }, 201);
 });

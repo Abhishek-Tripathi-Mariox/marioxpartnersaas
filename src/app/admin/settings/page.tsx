@@ -39,7 +39,7 @@ function SettingsForm({ initial }: { initial: PortalSettings }) {
 
       {section === 'pipeline' && (
         <div className="bento">
-          <Card className="c7" title="Stages" subtitle="Leads move left to right. Won and Lost are always added at the end. Probability drives the weighted forecast.">
+          <Card className="c7" title="Stages" subtitle="Leads move left to right. Won and Lost are always added at the end.">
             <ListEditor
               items={pipe.stages}
               onChange={stages => setPipe({ stages })}
@@ -49,15 +49,13 @@ function SettingsForm({ initial }: { initial: PortalSettings }) {
                 <>
                   <i style={{ width: 10, height: 10, borderRadius: 3, background: s.key ? stageColor(pipe, s.key) : 'var(--line-2)' }} />
                   <div style={{ flex: 1, minWidth: 180 }}><Input small placeholder="Stage name" value={s.name} onChange={e => update({ name: e.target.value })} required /></div>
-                  <div style={{ width: 110 }}><Input small type="number" min={0} max={100} className="num r" value={s.prob} onChange={e => update({ prob: Number(e.target.value) })} aria-label="Probability %" /></div>
-                  <span className="sub">%</span>
                 </>
               )}
             />
             <div className="row wrap" style={{ gap: 6, marginTop: 14 }}>
               <span className="sub">Fixed:</span>
-              <Badge tone="good">Won · 100%</Badge>
-              <Badge tone="bad">Lost · 0%</Badge>
+              <Badge tone="good">Won</Badge>
+              <Badge tone="bad">Lost</Badge>
             </div>
           </Card>
 

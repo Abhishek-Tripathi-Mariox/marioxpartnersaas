@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react';
 import { Chips, Pagination, SearchInput, Skeleton } from '@/components/ui';
 import { useList } from '@/hooks/useList';
+import { fileUrl, isImage } from '@/components/forms/FileUploader';
 import type { Resource } from '@/types';
 
 const TONE: Record<string, string> = { 'Case study': 't-fire', Portfolio: 't-info', Deck: 't-violet', Brochure: 't-good' };
@@ -35,7 +36,10 @@ export function ResourceGrid({ action, listRef }: Props) {
         <div className="g3" style={{ gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', opacity: list.loading ? 0.6 : 1 }}>
           {rows.map(r => (
             <div key={r._id} className="card res hov" style={r.hidden ? { opacity: 0.55 } : undefined}>
-              <div className={`res-c ${TONE[r.type] ?? 't-mute'}`}>
+              <div
+                className={`res-c ${TONE[r.type] ?? 't-mute'} ${r.file && isImage(r.file) ? 'has-img' : ''}`}
+                style={r.file && isImage(r.file) ? { backgroundImage: `url(${fileUrl(r.file)})` } : undefined}
+              >
                 <span className="lbl" style={{ color: 'inherit' }}>{r.type}{r.hidden ? ' · hidden' : ''}</span>
                 <span className="f">.{(r.format || 'file').toLowerCase()}</span>
               </div>

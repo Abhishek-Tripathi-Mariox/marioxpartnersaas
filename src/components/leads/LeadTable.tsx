@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePipeline } from '@/components/SettingsProvider';
 import { Avatar, Badge, DataTable, type Column } from '@/components/ui';
 import { date, short } from '@/lib/format';
-import { LOST, WON, isOpen, priorityTone, stageColor, stageName, stageProb } from '@/lib/pipeline';
+import { LOST, WON, isOpen, priorityTone, stageColor, stageName } from '@/lib/pipeline';
 import type { Lead, OwnerRef } from '@/types';
 import { dueLabel } from './TaskRow';
 import { nextTask } from './stages';
@@ -31,7 +31,6 @@ export function LeadTable({ leads, loading, showOwner, hrefBase = '/leads', sort
     ...(showOwner ? [{ key: 'owner', header: 'Partner', width: '150px', render: (l: Lead) => <span className="sub">{(l.owner as OwnerRef)?.name ?? '—'}</span> }] : []),
     { key: 'stage', header: 'Stage', width: '150px', render: l => <span className="row" style={{ gap: 7, fontSize: 13.5 }}><i style={{ width: 8, height: 8, borderRadius: 3, background: stageColor(cfg, l.stage) }} />{stageName(cfg, l.stage)}</span> },
     { key: 'value', header: 'Value', width: '100px', sort: 'value', render: l => <span className="num strong">{short(l.value)}</span> },
-    { key: 'prob', header: 'Prob.', width: '64px', render: l => <span className="num sub">{stageProb(cfg, l.stage)}%</span> },
     { key: 'source', header: 'Source', width: '130px', render: l => <span className="sub">{l.source || '—'}</span> },
     { key: 'close', header: 'Close', width: '90px', sort: 'expectedClose', render: l => <span className="sub">{date(l.expectedClose)}</span> },
     {

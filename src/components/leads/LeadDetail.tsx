@@ -11,7 +11,7 @@ import { useApi } from '@/hooks/useApi';
 import { api } from '@/lib/client';
 import { DEFAULT_COMMISSION_RATE } from '@/lib/constants';
 import { date, inr, short, todayISO } from '@/lib/format';
-import { LOST, WON, allStages, isOpen, priorityTone, stageProb } from '@/lib/pipeline';
+import { LOST, WON, allStages, isOpen, priorityTone } from '@/lib/pipeline';
 import type { Lead, OwnerRef, User } from '@/types';
 import { leadFields } from './leadFields';
 import { TaskRow } from './TaskRow';
@@ -91,7 +91,6 @@ export function LeadDetail({ id, backHref = '/leads', admin }: { id: string; bac
   const contact = (lead.contact || '—').split(',');
   const stages = allStages(cfg);
   const current = stages.findIndex(s => s.key === lead.stage);
-  const prob = stageProb(cfg, lead.stage);
   const kindOf = (t: string) => (SYSTEM.includes(t) ? 'system' : t);
   const counts = lead.activities.reduce<Record<string, number>>((c, a) => ({ ...c, [kindOf(a.type)]: (c[kindOf(a.type)] ?? 0) + 1 }), {});
   const shownActs = actFilter === 'all' ? lead.activities : lead.activities.filter(a => kindOf(a.type) === actFilter);
@@ -132,7 +131,7 @@ export function LeadDetail({ id, backHref = '/leads', admin }: { id: string; bac
         </div>
       </div>
 
-      <Card title="Stage" subtitle={`${prob}% probability · expected close ${date(lead.expectedClose)}`} action={lead.priority && <Badge tone={priorityTone(cfg, lead.priority)}>{lead.priority}</Badge>}>
+      <Card title="Stage" subtitle={`Expected close ${date(lead.expectedClose)}`} action={lead.priority && <Badge tone={priorityTone(cfg, lead.priority)}>{lead.priority}</Badge>}>
         <div className="stages" style={{ gridTemplateColumns: `repeat(${stages.length},minmax(0,1fr))` }}>
           {stages.map((s, i) => (
             <button
@@ -259,8 +258,8 @@ export function LeadDetail({ id, backHref = '/leads', admin }: { id: string; bac
               {lead.email && <a className="copy" href={`mailto:${lead.email}`}><Icon name="mail" size="s" />{lead.email}</a>}
             </div>
             <div className="g2" style={{ gap: 10, marginTop: 14 }}>
-              <Note label="Probability" value={`${prob}%`} />
-              <Note label="Weighted" value={short((lead.value * prob) / 100)} good />
+              <Note label="Deal value" value={short(lead.value)} />
+              <Note label={lead.stage === WON ? 'Commission' : 'Commission if won'} value={short(lead.value * rate)} good info={`Deal value × ${Math.round(rate * 100)}% commission.`} />
             </div>
           </Card>
         </div>

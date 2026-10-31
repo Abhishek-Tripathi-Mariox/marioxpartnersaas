@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { FieldDef } from '@/components/forms/DynamicForm';
+import { AttachmentList, type Attachment } from '@/components/forms/FileUploader';
 import {
   DURATIONS, MEET_MODES, OFFICES, REQUEST_STATUS, SLOTS, TEAMS, TECH_TYPES, TICKET_CATS, VISIT_PURPOSES,
 } from '@/lib/constants';
@@ -50,7 +51,8 @@ export const REQUESTS: Record<RequestKind, Config> = {
       { key: 'project', header: 'Project', width: 'minmax(0,1.5fr)', render: r => <><div className="strong">{s(r.project)}</div><div className="sub">{s(r.client)}</div></> },
       { key: 'submitted', header: 'Submitted', render: r => <span className="num">{inr(r.submitted as number)}</span> },
       { key: 'approved', header: 'Approved', render: r => (r.approved ? <span className="num earn">{inr(r.approved as number)}</span> : '—') },
-      { key: 'comment', header: 'Mariox comment', width: 'minmax(0,2fr)', render: r => <span className="sub">{s(r.comment)}</span> },
+      { key: 'files', header: 'Files', width: 'minmax(0,1.2fr)', render: r => <AttachmentList files={r.attachments as Attachment[]} compact /> },
+      { key: 'comment', header: 'Mariox comment', width: 'minmax(0,1.6fr)', render: r => <span className="sub">{s(r.comment)}</span> },
     ],
     item: r => ({ title: s(r.project), sub: `${s(r.client)} · ${inr(r.submitted as number)}` }),
   },

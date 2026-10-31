@@ -138,9 +138,10 @@ After every code update: `git pull && npm ci && npm run build && pm2 reload mari
 | `MAIN_SITE_API_KEY` | secret shared with the main website |
 | `APP_URL` | the public URL, e.g. `http://13.x.x.x:3000` or `https://partners.mariox.in` |
 | `COOKIE_SECURE` | optional; defaults to `true` only when `APP_URL` starts with `https://` |
+| `BUCKET`, `REGION`, `ACCESSKEY`, `SECRETACCESSKEY` | AWS S3 bucket for uploads (scope attachments, sales kit). IAM user needs `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject`, `s3:ListBucket` on that bucket |
 
 **Check it:** open `APP_URL/api/health`. You should see `"ok":true,"db":"up"`. If it says
-`"db":"down"`, MongoDB is not reachable with that `MONGODB_URI`; anything `false` is a missing setting.
+`"db":"down"`, MongoDB is not reachable with that `MONGODB_URI`; `"storage":"down"` means the S3 settings or permissions are wrong; anything `false` is a missing setting.
 
 Logs: `pm2 logs mariox-partners`.
 

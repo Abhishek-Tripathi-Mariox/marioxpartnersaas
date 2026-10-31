@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { handle, session, body, ok, scope, HttpError } from '@/lib/api';
+import { deleteFile } from '@/lib/files';
 import { requestKind } from '@/lib/requests';
 import { requestReview } from '@/lib/schemas';
 
@@ -30,7 +31,9 @@ export const PATCH = handle(async (req, { kind, id }) => {
 export const DELETE = handle(async (_req, { kind, id }) => {
   const s = await session();
   const { model } = requestKind(kind);
-  const res = await model.deleteOne({ _id: id, ...scope(s) });
-  if (!res.deletedCount) throw new HttpError(404, 'Request not found');
+  const item = await model.findOneAndDelete({ _id: id, ...scope(s) });
+  if (!item) throw new HttpError(404, 'Request not found');
+  // Remove its attachments from S3 too.
+  for (const f of (item.attachments as { fileId: string }[] | undefined) ?? []) await deleteFile(f.fileId);
   return ok({ ok: true });
 });

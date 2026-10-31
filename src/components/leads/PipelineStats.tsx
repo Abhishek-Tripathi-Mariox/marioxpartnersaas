@@ -3,11 +3,11 @@ import { short } from '@/lib/format';
 import type { pipeline } from '@/lib/metrics';
 
 type Summary = ReturnType<typeof pipeline>;
-export type PipelinePick = 'open' | 'weighted' | 'commission' | 'closed' | 'tasks';
+export type PipelinePick = 'open' | 'commission' | 'closed' | 'tasks';
 
 type Props = {
   s: Summary;
-  rate: number;
+  rateLabel: string;
   followUps: number;
   overdue: number;
   active?: PipelinePick | null;
@@ -16,8 +16,7 @@ type Props = {
 };
 
 // Pipeline KPIs. Each tile opens the leads behind its number.
-export function PipelineStats({ s, rate, followUps, overdue, active, onPick, hrefFor }: Props) {
-  const pct = Math.round(rate * 100);
+export function PipelineStats({ s, rateLabel, followUps, overdue, active, onPick, hrefFor }: Props) {
   const link = (p: PipelinePick) => (hrefFor ? { href: hrefFor(p) } : onPick ? { onClick: () => onPick(p), active: active === p } : {});
   return (
     <Stats min={190}>
@@ -27,13 +26,8 @@ export function PipelineStats({ s, rate, followUps, overdue, active, onPick, hre
         {...link('open')}
       />
       <StatCard
-        icon="target" tone="violet" label="Weighted forecast" value={short(s.weighted)} hint="Value × stage probability"
-        info="For each open lead: deal value × its stage probability (set by Mariox in Settings), added up."
-        {...link('weighted')}
-      />
-      <StatCard
-        icon="rupee" tone="good" label="Expected commission" value={short(s.weighted * rate)} hint={`${pct}% of weighted forecast`} good
-        info={`Weighted forecast × your ${pct}% commission rate.`}
+        icon="rupee" tone="good" label="Expected commission" value={short(s.expected)} hint={`On ${s.won} won deal${s.won === 1 ? '' : 's'} · ${short(s.wonValue)}`} good
+        info={`Value of Won deals × ${rateLabel} commission. Open leads count only once they are won.`}
         {...link('commission')}
       />
       <StatCard

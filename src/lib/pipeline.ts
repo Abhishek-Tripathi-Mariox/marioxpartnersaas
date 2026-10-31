@@ -45,7 +45,6 @@ export function withDefaults(c?: Partial<PipelineConfig> | null): PipelineConfig
 export const allStages = (c: PipelineConfig) => [...c.stages, ...CLOSED];
 export const isOpen = (key: string) => key !== WON && key !== LOST;
 export const stageName = (c: PipelineConfig, key: string) => allStages(c).find(s => s.key === key)?.name ?? key;
-export const stageProb = (c: PipelineConfig, key: string) => allStages(c).find(s => s.key === key)?.prob ?? 0;
 export const priorityTone = (c: PipelineConfig, name?: string): ToneName => c.priorities.find(p => p.name === name)?.tone ?? 'mute';
 
 // Open stages cycle through these; won/lost are always green/red.

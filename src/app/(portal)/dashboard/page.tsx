@@ -31,7 +31,7 @@ export default function DashboardPage() {
   const allLeads = leads.data?.leads ?? [];
   const allProjects = projects.data?.projects ?? [];
   const m = earnings(allProjects, rate);
-  const pipe = pipeline(allLeads, cfg);
+  const pipe = pipeline(allLeads, rate);
   const upcoming = m.ledger.filter(x => x.state === 'due' || x.state === 'upcoming');
 
   const tasks = allLeads
@@ -121,7 +121,7 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        <Card className={sample ? 'c5' : 'c12'} title="Pipeline" subtitle={`${short(pipe.openValue)} open · you could earn ${short(pipe.weighted * rate)}`} action={<MoreLink href="/leads">Open</MoreLink>}>
+        <Card className={sample ? 'c5' : 'c12'} title="Pipeline" subtitle={`${short(pipe.openValue)} open · ${short(pipe.expected)} expected commission on won deals`} action={<MoreLink href="/leads">Open</MoreLink>}>
           <div className="stack" style={{ gap: 10 }}>
             {funnel.map(f => (
               <Link key={f.st.key} href={`/leads?view=list&stage=${f.st.key}`} className="funnel-row" title={`${f.n} lead(s) in ${f.st.name}`}>

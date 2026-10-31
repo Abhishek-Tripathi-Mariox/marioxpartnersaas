@@ -61,7 +61,7 @@ export function LeadBoard({ leads, rate, hrefBase = '/leads', showOwner }: { lea
                 {stage.name}
                 <span className="n">{col.length}</span>
               </div>
-              <span className="m num">{short(v)} · {stage.prob}%</span>
+              <span className="m num">{short(v)}</span>
               <div className="col-meter"><i style={{ width: `${(v / total) * 100}%`, background: color }} /></div>
             </div>
             {col.length ? col.map(l => <LeadCard key={l._id} lead={l} rate={rate(l)} href={`${hrefBase}/${l._id}`} showOwner={showOwner} />) : <div className="empty">No leads</div>}

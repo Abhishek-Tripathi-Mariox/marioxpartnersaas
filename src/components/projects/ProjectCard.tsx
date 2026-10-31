@@ -48,7 +48,7 @@ function Timeline({ stage, milestones }: { stage: number; milestones: string[] }
 export function ProjectCard({ project: p, rate, action }: { project: Project; rate?: number; action?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const owner = typeof p.owner === 'object' ? (p.owner as OwnerRef) : null;
-  const r = rate ?? owner?.commissionRate ?? DEFAULT_COMMISSION_RATE;
+  const r = p.commissionRate ?? rate ?? owner?.commissionRate ?? DEFAULT_COMMISSION_RATE;
   const received = p.payments.filter(x => x.status === 'received').reduce((a, x) => a + x.amount, 0);
   const next = p.payments.find(x => x.status !== 'received');
 

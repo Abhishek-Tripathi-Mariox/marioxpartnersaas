@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { DynamicForm, type FieldDef } from '@/components/forms/DynamicForm';
 import { PipelineView } from '@/components/leads/PipelineView';
 import { ProjectList } from '@/components/projects/ProjectList';
-import { usePipeline } from '@/components/SettingsProvider';
+import { AttachmentList, type Attachment } from '@/components/forms/FileUploader';
 import { Button, EmptyState, Icon, Input, Modal, StatCard, Stats, StatusBadge, Tabs, hue, initials, useToast, SkeletonCards } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { api } from '@/lib/client';
@@ -36,7 +36,6 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
   const { id } = use(params);
   const router = useRouter();
   const toast = useToast();
-  const cfg = usePipeline();
   const { data, reload, setData } = useApi<{ user: User }>(`/api/admin/users/${id}`);
   const leads = useApi<{ leads: Lead[] }>(`/api/leads?owner=${id}`);
   const projects = useApi<{ projects: Project[] }>(`/api/projects?owner=${id}`);
@@ -57,7 +56,7 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
 
   const mine = (projects.data?.projects ?? []).filter(p => (typeof p.owner === 'object' ? p.owner._id : p.owner) === id);
   const m = earnings(mine, u.commissionRate);
-  const pipe = pipeline(leads.data?.leads ?? [], cfg);
+  const pipe = pipeline(leads.data?.leads ?? [], u.commissionRate);
   const myReqs = KINDS.flatMap(k => (reqs[k].data?.items ?? []).filter(r => (typeof r.owner === 'object' ? r.owner._id : r.owner) === id).map(r => ({ r, kind: k })));
 
   async function patch(body: Record<string, unknown>, msg: string) {
@@ -159,7 +158,10 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
                   <div className="li-t">{String(r.project || r.subject || r.type || r.client)}</div>
                   <div className="sub">{KIND_LABEL[kind]} · {String(r.client ?? r.category ?? '')} · {date(r.createdAt)}</div>
                 </div>
-                <StatusBadge status={r.status} />
+                <span className="row" style={{ gap: 10 }}>
+                  {Array.isArray(r.attachments) && r.attachments.length > 0 && <AttachmentList files={r.attachments as Attachment[]} compact />}
+                  <StatusBadge status={r.status} />
+                </span>
               </Link>
             ))
           ) : (

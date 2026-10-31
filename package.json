@@ -12,6 +12,8 @@
     "migrate": "tsx --env-file=.env.local scripts/migrate-stages.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1161.0",
+    "@aws-sdk/s3-request-presigner": "^3.1161.0",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.6",
     "mongoose": "^8.9.5",

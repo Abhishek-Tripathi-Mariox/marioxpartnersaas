@@ -95,7 +95,8 @@ export function RequestsView({ kind, admin, embedded, above, initialStatus }: Pr
           <DataTable rows={items} loading={loading} columns={columns} rowKey={r => r._id} empty={list.filtered ? 'No requests match your filters.' : cfg.empty} onRowClick={setReviewing} minWidth={820} sort={list.sort} onSort={list.setSort} footer={pager} />
         </Card>
         {reviewing && (
-          <Modal open title={`Review: ${String(reviewing.client || reviewing.subject || '')}`} onClose={() => setReviewing(null)}>
+          <Modal open title={`Review: ${String(reviewing.client || reviewing.subject || '')}`} subtitle={`From ${(reviewing.owner as OwnerRef)?.name ?? 'partner'} · ${date(reviewing.createdAt)}`} onClose={() => setReviewing(null)} wide={kind === 'scope'}>
+            {kind === 'scope' && <div style={{ marginBottom: 20 }}><ScopeDetails s={reviewing} /></div>}
             <DynamicForm
               fields={[{ name: 'status', label: 'Status', type: 'select', options: REQUEST_STATUS[kind] }, ...cfg.reviewFields]}
               initial={Object.fromEntries(['status', ...cfg.reviewFields.map(f => f.name)].map(k => [k, reviewing[k] ?? (k === 'approved' ? reviewing.submitted : '')]))}
@@ -103,7 +104,6 @@ export function RequestsView({ kind, admin, embedded, above, initialStatus }: Pr
               onSubmit={review}
               onCancel={() => setReviewing(null)}
             />
-            {kind === 'scope' && <ScopeDetails s={reviewing} />}
             <div style={{ borderTop: '1px solid var(--line)', marginTop: 18, paddingTop: 14 }}>
               <Button size="sm" variant="danger" icon="trash" onClick={remove}>Delete this request</Button>
             </div>

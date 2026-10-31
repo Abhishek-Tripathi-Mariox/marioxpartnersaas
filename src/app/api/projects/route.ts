@@ -1,6 +1,8 @@
 import { handle, session, admin, body, ok, scope } from '@/lib/api';
 import { eq, runList, type ListSpec } from '@/lib/list';
 import { projectSchema } from '@/lib/schemas';
+import { DEFAULT_COMMISSION_RATE } from '@/lib/constants';
+import { User } from '@/models/User';
 import { Project } from '@/models/Project';
 
 const LIST: ListSpec = {
@@ -18,6 +20,11 @@ export const GET = handle(async req => {
 
 export const POST = handle(async req => {
   await admin();
-  const project = await Project.create(await body(req, projectSchema));
+  const data = await body(req, projectSchema);
+  if (data.commissionRate == null) {
+    const partner = await User.findById(data.owner).select('commissionRate').lean<{ commissionRate?: number }>();
+    data.commissionRate = partner?.commissionRate ?? DEFAULT_COMMISSION_RATE;
+  }
+  const project = await Project.create(data);
   return ok({ project }, 201);
 });
