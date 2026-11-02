@@ -10,8 +10,10 @@ import { connectDB } from './db';
 // stores the S3 key and who may read it; downloads are short-lived signed S3 URLs.
 
 export const MAX_FILE_MB = 15;
-export const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
-const ALLOWED = /\.(pdf|docx?|xlsx?|pptx?|csv|txt|png|jpe?g|webp|gif|zip)$/i;
+export const MAX_VIDEO_MB = 25;
+const ALLOWED = /\.(pdf|docx?|xlsx?|pptx?|csv|txt|png|jpe?g|webp|gif|zip|mp4|m4v|mov|webm)$/i;
+const VIDEO = /\.(mp4|m4v|mov|webm)$/i;
+const maxMb = (name: string) => (VIDEO.test(name) ? MAX_VIDEO_MB : MAX_FILE_MB);
 
 export type StoredFile = { fileId: string; name: string; size: number; type: string };
 
@@ -51,8 +53,9 @@ export async function storageStatus() {
 const safeName = (n: string) => n.normalize('NFKD').replace(/[^\w.\- ]+/g, '').replace(/\s+/g, '-').slice(-120) || 'file';
 
 export async function saveFile(file: File, owner: string): Promise<StoredFile> {
-  if (!file.name || !ALLOWED.test(file.name)) throw new HttpError(400, `${file.name || 'File'}: only PDF, Word, Excel, PowerPoint, CSV, text, images or ZIP`);
-  if (file.size > MAX_FILE_BYTES) throw new HttpError(400, `${file.name} is larger than ${MAX_FILE_MB} MB`);
+  if (!file.name || !ALLOWED.test(file.name)) throw new HttpError(400, `${file.name || 'File'}: only PDF, Word, Excel, PowerPoint, CSV, text, images, videos or ZIP`);
+  const limit = maxMb(file.name);
+  if (file.size > limit * 1024 * 1024) throw new HttpError(400, `${file.name} is larger than ${limit} MB`);
 
   const { client, bucket } = s3();
   const type = file.type || 'application/octet-stream';

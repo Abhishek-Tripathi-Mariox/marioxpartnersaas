@@ -1,6 +1,6 @@
 'use client';
 
-import { FileUploader, MAX_FILE_MB, fileExt, fileSize, type Attachment } from '@/components/forms/FileUploader';
+import { FileUploader, MAX_FILE_MB, MAX_VIDEO_MB, fileExt, fileSize, type Attachment } from '@/components/forms/FileUploader';
 import { Button, Chips, FormError, Input, Toggle } from '@/components/ui';
 import { useForm } from '@/hooks/useForm';
 import { RESOURCE_TYPES } from '@/lib/constants';
@@ -47,7 +47,7 @@ export function KitForm({ initial, onSubmit, onCancel }: { initial: Partial<Reso
 
       <div className="field">
         <span>File</span>
-        <FileUploader single value={v.files} onChange={onFiles} hint={`Case study, deck or brochure · PDF, PPTX, DOCX, images up to ${MAX_FILE_MB} MB`} />
+        <FileUploader single value={v.files} onChange={onFiles} hint={`Case study, deck, brochure or video · PDF, PPTX, DOCX, images up to ${MAX_FILE_MB} MB · MP4, MOV, WEBM videos up to ${MAX_VIDEO_MB} MB`} />
       </div>
 
       <div className="grid-f" style={{ gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 12 }}>
