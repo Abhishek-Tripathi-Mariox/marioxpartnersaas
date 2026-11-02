@@ -5,16 +5,16 @@ import { useRouter } from 'next/navigation';
 import { DynamicForm, type FieldDef } from '@/components/forms/DynamicForm';
 import { usePipeline } from '@/components/SettingsProvider';
 import { useUser } from '@/components/UserProvider';
-import { Button, Chips, Icon, Modal, PageHeader, Pagination, SearchInput, Select, Tabs } from '@/components/ui';
+import { Button, Chips, Icon, Modal, PageHeader, Pagination, SearchInput, Select, Tabs, useToast } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { useList } from '@/hooks/useList';
 import { useQueryFlag } from '@/hooks/useQueryFlag';
 import { api } from '@/lib/client';
 import { DEFAULT_COMMISSION_RATE } from '@/lib/constants';
 import { todayISO } from '@/lib/format';
-import { pipeline } from '@/lib/metrics';
-import { LOST, WON, allStages, isOpen } from '@/lib/pipeline';
-import type { Lead, OwnerRef, User } from '@/types';
+import { earnings, pipeline } from '@/lib/metrics';
+import { LOST, WON, allStages, isOpen, stageName } from '@/lib/pipeline';
+import type { Lead, OwnerRef, Project, User } from '@/types';
 import { LeadBoard } from './LeadBoard';
 import { LeadTable } from './LeadTable';
 import { leadFields } from './leadFields';
@@ -65,26 +65,25 @@ export function PipelineView({ admin, partnerId }: { admin?: boolean; partnerId?
   function pick(p: PipelinePick) {
     if (p === 'tasks') return setView('tasks');
     setView('list');
-    list.setFilter('stage', p === 'closed' ? closedKeys : p === 'commission' ? WON : openKeys);
+    list.setFilter('stage', p === 'closed' ? closedKeys : p === 'won' ? WON : openKeys);
     list.setSort(p === 'open' ? '-updatedAt' : '-value');
   }
   const picked: PipelinePick | null =
     view === 'tasks' ? 'tasks'
     : view !== 'list' ? null
     : list.filters.stage === closedKeys ? 'closed'
-    : list.filters.stage === WON ? 'commission'
+    : list.filters.stage === WON ? 'won'
     : list.filters.stage === openKeys ? 'open'
     : null;
 
   const owner = partnerId ?? list.filters.owner ?? '';
-  const { data, reload } = useApi<{ leads: Lead[] }>(`/api/leads${owner ? `?owner=${owner}` : ''}`);
+  const { data, reload, setData } = useApi<{ leads: Lead[] }>(`/api/leads${owner ? `?owner=${owner}` : ''}`);
   const partners = useApi<{ users: User[] }>(admin ? '/api/admin/users?role=partner' : null);
 
   const base = admin ? '/admin/leads' : '/leads';
   const partnerList = partners.data?.users ?? [];
   const rateOf = (l: Lead) =>
     admin ? (l.owner as OwnerRef)?.commissionRate ?? DEFAULT_COMMISSION_RATE : user?.commissionRate ?? DEFAULT_COMMISSION_RATE;
-  const avgRate = admin ? DEFAULT_COMMISSION_RATE : user?.commissionRate ?? DEFAULT_COMMISSION_RATE;
 
   // Board view applies the same toolbar filters in memory.
   const all = data?.leads ?? [];
@@ -116,6 +115,35 @@ export function PipelineView({ admin, partnerId }: { admin?: boolean; partnerId?
     router.push(`${base}/${lead._id}`);
   }
 
+  // Commission so far, from the same (cached) projects data as Home and Earnings.
+  const projects = useApi<{ projects: Project[] }>(partnerId ? `/api/projects?owner=${partnerId}` : '/api/projects');
+  const money = earnings(projects.data?.projects ?? [], user?.commissionRate ?? DEFAULT_COMMISSION_RATE);
+  const commission = projects.data
+    ? { released: money.released, processing: money.processing, future: money.future, href: admin ? '/admin/projects' : '/earnings', admin }
+    : undefined;
+
+  // Drag & drop on the board. The card moves at once; the server confirms (or it moves back).
+  const toast = useToast();
+  const [losing, setLosing] = useState<Lead | null>(null);
+  const [lostReason, setLostReason] = useState('');
+  async function move(lead: Lead, stage: string, extra: Record<string, unknown> = {}) {
+    if (stage === LOST && !extra.lostReason) {
+      setLostReason(cfg.lostReasons[0] ?? 'Not specified');
+      return setLosing(lead);
+    }
+    const before = data;
+    if (data) setData({ ...data, leads: data.leads.map(l => (l._id === lead._id ? { ...l, stage, ...extra } : l)) });
+    try {
+      await api.patch(`/api/leads/${lead._id}`, { stage, ...extra });
+      toast(`${lead.company} moved to ${stageName(cfg, stage)}`);
+      reload();
+      list.reload();
+    } catch (e) {
+      if (before) setData(before);
+      toast((e as Error).message, true);
+    }
+  }
+
   async function toggle(leadId: string, taskId: string) {
     await api.patch(`/api/leads/${leadId}`, { toggleTask: taskId });
     reload();
@@ -144,7 +172,7 @@ export function PipelineView({ admin, partnerId }: { admin?: boolean; partnerId?
         />
       )}
 
-      <PipelineStats s={pipeline(all, rateOf)} rateLabel={admin ? "each partner's" : `your ${Math.round(avgRate * 100)}%`} followUps={pending.length} overdue={overdue} onPick={pick} active={picked} />
+      <PipelineStats s={pipeline(all, rateOf)} commission={commission} followUps={pending.length} overdue={overdue} onPick={pick} active={picked} />
 
       {view !== 'tasks' && (
         <div className="toolbar">
@@ -167,7 +195,7 @@ export function PipelineView({ admin, partnerId }: { admin?: boolean; partnerId?
         </div>
       )}
 
-      {view === 'board' && <LeadBoard leads={boardLeads} rate={rateOf} hrefBase={base} showOwner={admin && !embedded} />}
+      {view === 'board' && <LeadBoard leads={boardLeads} rate={rateOf} hrefBase={base} showOwner={admin && !embedded} onMove={move} />}
       {view === 'list' && (
         <LeadTable
           leads={list.items}
@@ -201,6 +229,16 @@ export function PipelineView({ admin, partnerId }: { admin?: boolean; partnerId?
           })}
         </div>
       )}
+
+      <Modal open={!!losing} title={`Mark ${losing?.company ?? ''} as lost`} subtitle="Why was this deal lost?" onClose={() => setLosing(null)}>
+        <div className="stack">
+          <Select options={cfg.lostReasons} value={lostReason} onChange={e => setLostReason(e.target.value)} aria-label="Lost reason" />
+          <div className="form-foot">
+            <Button variant="ghost" onClick={() => setLosing(null)}>Cancel</Button>
+            <Button variant="danger" onClick={() => { const l = losing!; setLosing(null); move(l, LOST, { lostReason }); }}>Mark lost</Button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal open={adding} title={admin ? 'New lead for a partner' : 'New lead'} subtitle="A first call is scheduled for tomorrow automatically." onClose={() => setAdding(false)}>
         <DynamicForm

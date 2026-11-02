@@ -121,7 +121,7 @@ export default function DashboardPage() {
           </Card>
         )}
 
-        <Card className={sample ? 'c5' : 'c12'} title="Pipeline" subtitle={`${short(pipe.openValue)} open · ${short(pipe.expected)} expected commission on won deals`} action={<MoreLink href="/leads">Open</MoreLink>}>
+        <Card className={sample ? 'c5' : 'c12'} title="Pipeline" subtitle={`${short(pipe.openValue)} open · ${short(pipe.wonValue)} won (${pipe.won} deal${pipe.won === 1 ? '' : 's'})`} action={<MoreLink href="/leads">Open</MoreLink>}>
           <div className="stack" style={{ gap: 10 }}>
             {funnel.map(f => (
               <Link key={f.st.key} href={`/leads?view=list&stage=${f.st.key}`} className="funnel-row" title={`${f.n} lead(s) in ${f.st.name}`}>

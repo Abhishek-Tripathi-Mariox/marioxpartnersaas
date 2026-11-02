@@ -47,7 +47,7 @@ export default function AdminOverview() {
       const e = earnings(theirProjects, p.commissionRate);
       return { ...p, ...pipeline(mine, p.commissionRate), released: e.released, processing: e.processing, future: e.future };
     })
-    .sort((a, b) => b.expected + b.released - (a.expected + a.released) || b.openValue - a.openValue);
+    .sort((a, b) => b.wonValue - a.wonValue || b.openValue - a.openValue);
 
   return (
     <>
@@ -57,9 +57,7 @@ export default function AdminOverview() {
           href="/admin/partners?status=active" info="All partner accounts. Opens the active partners." />
         <StatCard icon="pipe" tone="fire" label="Open pipeline" value={short(pipe.openValue)} hint={`${pipe.open} leads`}
           href={`/admin/leads?view=list&stage=${openKeys}&sort=-value`} info="Deal value of every lead, across all partners, that is not Won or Lost." />
-        <StatCard icon="rupee" tone="good" label="Expected commission" value={short(pipe.expected)} hint="On won deals" good
-          href={`/admin/leads?view=list&stage=${WON}&sort=-value`} info="Value of every Won lead × that partner's commission rate, added up." />
-        <StatCard icon="trophy" tone="good" label="Won" value={short(pipe.wonValue)} hint={`${pipe.won} deals · ${pipe.winRate}% win rate`}
+        <StatCard icon="trophy" tone="good" label="Won" value={short(pipe.wonValue)} hint={`${pipe.won} deals · ${pipe.winRate}% win rate`} good
           href={`/admin/leads?view=list&stage=${WON}&sort=-value`} info="Deal value of Won leads. Win rate = Won ÷ (Won + Lost)." />
       </Stats>
       <div className="eyebrow" style={{ marginTop: 4 }}>Waiting on Mariox</div>
@@ -75,7 +73,7 @@ export default function AdminOverview() {
       <div className="eyebrow" style={{ marginTop: 4 }}>Partner commissions</div>
       <EarningsStats e={money} releasedHint="Paid to partners" rateLabel="each partner's rate" hrefFor={() => '/admin/projects'} />
 
-      <Card title="Partner leaderboard" subtitle="Commission per partner at their own rate · Expected = won deal value × rate · Pending = client paid, payout not released" action={<MoreLink href="/admin/partners">Manage</MoreLink>}>
+      <Card title="Partner leaderboard" subtitle="Each partner at their own commission rate · Released = paid out · Pending = client paid, payout not released yet" action={<MoreLink href="/admin/partners">Manage</MoreLink>}>
         <DataTable
           rows={board}
           rowKey={p => p.id}
@@ -87,7 +85,6 @@ export default function AdminOverview() {
             { key: 'pct', header: 'Rate', width: '70px', align: 'right', render: p => <span className="num strong">{Math.round(p.commissionRate * 100)}%</span> },
             { key: 'open', header: 'Open', align: 'right', render: p => <span className="num">{p.open} · {short(p.openValue)}</span> },
             { key: 'won', header: 'Won', align: 'right', render: p => <span className="num">{p.won} · {short(p.wonValue)}</span> },
-            { key: 'exp', header: 'Expected', align: 'right', render: p => <span className="num earn">{short(p.expected)}</span> },
             { key: 'rel', header: 'Released', align: 'right', render: p => <span className="num">{short(p.released)}</span> },
             { key: 'proc', header: 'Pending payout', align: 'right', render: p => <span className="num" style={p.processing ? { color: 'var(--warn)', fontWeight: 600 } : undefined}>{short(p.processing)}</span> },
             { key: 'win', header: 'Win rate', width: '80px', align: 'right', render: p => `${p.winRate}%` },

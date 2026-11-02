@@ -179,3 +179,9 @@
 
 .dl-btn { width: 30px; height: 30px; flex-shrink: 0; }
 .dl-btn:hover { color: var(--accent); background: var(--accent-soft); }
+
+/* pipeline drag & drop */
+.lead-drag { cursor: grab; }
+.lead-drag:active { cursor: grabbing; }
+.lead-drag.ph { opacity: .3; }
+.lead-drag .lead { cursor: inherit; -webkit-user-drag: none; }
