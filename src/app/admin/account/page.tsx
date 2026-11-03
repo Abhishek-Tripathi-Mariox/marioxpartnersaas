@@ -6,11 +6,12 @@ import { useUser } from '@/components/UserProvider';
 import { Card, Icon, PageHeader, SkeletonCards, Tabs, hue, initials, useToast } from '@/components/ui';
 import { useAccountTab } from '@/hooks/useAccountTab';
 import { api } from '@/lib/client';
+import { R } from '@/lib/validate';
 
 const FIELDS: FieldDef[] = [
-  { name: 'name', label: 'Full name', required: true },
+  { name: 'name', label: 'Full name', required: true, rule: R.person },
   { name: 'phone', label: 'Phone', type: 'tel' },
-  { name: 'city', label: 'City' },
+  { name: 'city', label: 'City', rule: R.city },
 ];
 
 // The signed-in admin's own account: profile, password, sessions and theme.

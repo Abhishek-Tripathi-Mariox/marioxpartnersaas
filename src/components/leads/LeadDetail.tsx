@@ -15,6 +15,7 @@ import { LOST, WON, allStages, isOpen, priorityTone } from '@/lib/pipeline';
 import type { Lead, OwnerRef, User } from '@/types';
 import { leadFields } from './leadFields';
 import { TaskRow } from './TaskRow';
+import { R, notPast } from '@/lib/validate';
 
 const LOG_HINT: Record<string, string> = {
   call: 'e.g. Spoke to CTO, wants a demo next week',
@@ -63,6 +64,8 @@ export function LeadDetail({ id, backHref = '/leads', admin }: { id: string; bac
   const [logType, setLogType] = useState<LogType>('call');
   const [logText, setLogText] = useState('');
   const [task, setTask] = useState({ text: '', due: todayISO() });
+  const [logErr, setLogErr] = useState<string | null>(null);
+  const [taskErr, setTaskErr] = useState<{ text?: string | null; due?: string | null }>({});
   const [lostReason, setLostReason] = useState('');
   const [actFilter, setActFilter] = useState('all');
 
@@ -174,8 +177,10 @@ export function LeadDetail({ id, backHref = '/leads', admin }: { id: string; bac
             className="log-box"
             onSubmit={e => {
               e.preventDefault();
-              if (!logText.trim()) return;
-              patch({ addActivity: { type: logType, text: logText } }, `${typeLabel(logType)} logged`);
+              // A logged call / note needs words, not just a number.
+              const err = R.required('Note')(logText) ?? R.words(3, 1000)(logText.trim());
+              if (err) return setLogErr(err);
+              patch({ addActivity: { type: logType, text: logText.trim() } }, `${typeLabel(logType)} logged`);
               setLogText('');
             }}
           >
@@ -191,7 +196,7 @@ export function LeadDetail({ id, backHref = '/leads', admin }: { id: string; bac
               </div>
             </div>
             <div className="row">
-              <div style={{ flex: 1 }}><Input placeholder={LOG_HINT[logType]} value={logText} onChange={e => setLogText(e.target.value)} /></div>
+              <div style={{ flex: 1 }}><Input placeholder={LOG_HINT[logType]} value={logText} error={logErr} maxLength={1000} onChange={e => { setLogText(e.target.value); setLogErr(null); }} /></div>
               <Button variant="ink" icon="plus">Log {typeLabel(logType).toLowerCase()}</Button>
             </div>
           </form>
@@ -232,14 +237,15 @@ export function LeadDetail({ id, backHref = '/leads', admin }: { id: string; bac
               style={{ marginTop: 14, gap: 8 }}
               onSubmit={e => {
                 e.preventDefault();
-                if (!task.text.trim()) return;
-                patch({ addTask: task }, 'Follow-up added');
+                const err = { text: R.required('Next step')(task.text) ?? R.words(2, 200)(task.text.trim()), due: notPast(task.due, 'Due date') };
+                if (err.text || err.due) return setTaskErr(err);
+                patch({ addTask: { ...task, text: task.text.trim() } }, 'Follow-up added');
                 setTask({ text: '', due: todayISO() });
               }}
             >
-              <Input small placeholder="Next step…" value={task.text} onChange={e => setTask({ ...task, text: e.target.value })} />
-              <div className="row">
-                <div style={{ flex: 1 }}><Input small type="date" value={task.due} onChange={e => setTask({ ...task, due: e.target.value })} /></div>
+              <Input small placeholder="Next step…" value={task.text} error={taskErr.text} maxLength={200} onChange={e => { setTask({ ...task, text: e.target.value }); setTaskErr({}); }} />
+              <div className="row" style={{ alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}><Input small type="date" min={todayISO()} max="2100-12-31" value={task.due} error={taskErr.due} onChange={e => { setTask({ ...task, due: e.target.value }); setTaskErr({}); }} /></div>
                 <Button size="sm" icon="plus">Add</Button>
               </div>
             </form>

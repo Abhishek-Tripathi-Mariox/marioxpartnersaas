@@ -3,38 +3,85 @@
 import { useState, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
 import { Icon } from './Icon';
 import { Dropdown, type Option } from './Dropdown';
+import { COUNTRIES, DEFAULT_COUNTRY, countryByIso, formatPhone, parsePhone } from '@/lib/validate';
 
-type Wrap = { label?: string; hint?: string; small?: boolean };
+// error: shown in red under the field (replaces the hint) and outlines the input.
+type Wrap = { label?: string; hint?: string; small?: boolean; error?: string | null };
 
 // `custom` renders a div instead of a label, because a <label> wrapping the dropdown button
 // would re-open it whenever the label text is clicked.
-function Field({ label, hint, children, custom }: Wrap & { children: ReactNode; custom?: boolean }) {
-  if (!label && !hint) return <>{children}</>;
+export function Field({ label, hint, error, children, custom }: Wrap & { children: ReactNode; custom?: boolean }) {
+  if (!label && !hint && !error) return <>{children}</>;
   const Tag = custom ? 'div' : 'label';
   return (
-    <Tag className="field">
+    <Tag className={`field ${error ? 'has-err' : ''}`}>
       {label && <span>{label}</span>}
       {children}
-      {hint && <small>{hint}</small>}
+      {error ? <small className="field-err" role="alert">{error}</small> : hint && <small>{hint}</small>}
     </Tag>
   );
 }
 
 const inp = (small?: boolean, extra = '') => ['inp', small && 'sm', extra].filter(Boolean).join(' ');
 
-export function Input({ label, hint, small, className = '', ...rest }: Wrap & InputHTMLAttributes<HTMLInputElement>) {
+export function Input({ label, hint, small, error, className = '', ...rest }: Wrap & InputHTMLAttributes<HTMLInputElement>) {
   return (
-    <Field label={label} hint={hint}>
-      <input className={inp(small, className)} {...rest} />
+    <Field label={label} hint={hint} error={error}>
+      <input className={inp(small, className)} aria-invalid={error ? true : undefined} {...rest} />
+    </Field>
+  );
+}
+
+// Phone with a country code: pick the country, type the number (digits only, capped at that
+// country's length). The value is one string, "+91 9876543210", so forms and the API keep a single field.
+export function PhoneInput({ label, hint, small, error, value, onChange, country: prefer, placeholder, required, disabled }: Wrap & {
+  value?: string | number | null;
+  onChange?: (e: { target: { value: string } }) => void;
+  country?: string; // ISO code to start with when the value is empty, e.g. "AE"
+  placeholder?: string;
+  required?: boolean;
+  disabled?: boolean;
+}) {
+  const parsed = parsePhone(String(value ?? ''), prefer);
+  const [iso, setIso] = useState((value ? parsed.country : countryByIso(prefer) ?? DEFAULT_COUNTRY).iso);
+  const c = countryByIso(iso) ?? parsed.country;
+  const digits = parsed.digits;
+  const emit = (iso2: string, d: string) => onChange?.({ target: { value: formatPhone(countryByIso(iso2) ?? DEFAULT_COUNTRY, d) } });
+  return (
+    <Field label={label} hint={hint ?? `${c.name}: ${c.len.join(' or ')} digits`} error={error} custom>
+      <span className="ph-wrap">
+        <Dropdown
+          small={small}
+          aria-label="Country code"
+          value={iso}
+          disabled={disabled}
+          onChange={v => { setIso(v); emit(v, digits); }}
+          options={COUNTRIES.map(x => ({ value: x.iso, label: `${x.flag} +${x.dial}`, hint: x.name }))}
+          className="ph-cc"
+        />
+        <input
+          className={inp(small, 'ph-num')}
+          inputMode="numeric"
+          autoComplete="tel-national"
+          aria-label={label ?? 'Phone number'}
+          aria-invalid={error ? true : undefined}
+          placeholder={placeholder || '9876543210'.slice(0, Math.max(...c.len))}
+          maxLength={Math.max(...c.len)}
+          required={required}
+          disabled={disabled}
+          value={digits}
+          onChange={e => emit(iso, e.target.value.replace(/\D/g, '').replace(/^0+/, '').slice(0, Math.max(...c.len)))}
+        />
+      </span>
     </Field>
   );
 }
 
 // Password with a show / hide button inside the field.
-export function PasswordInput({ label, hint, small, className = '', ...rest }: Wrap & Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+export function PasswordInput({ label, hint, small, error, className = '', ...rest }: Wrap & Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
   const [show, setShow] = useState(false);
   return (
-    <Field label={label} hint={hint}>
+    <Field label={label} hint={hint} error={error}>
       <span className="pw-wrap">
         <input className={inp(small, className)} type={show ? 'text' : 'password'} {...rest} />
         <button type="button" className="pw-eye" onClick={e => { e.preventDefault(); setShow(s => !s); }} aria-label={show ? 'Hide password' : 'Show password'} title={show ? 'Hide password' : 'Show password'}>
@@ -45,10 +92,10 @@ export function PasswordInput({ label, hint, small, className = '', ...rest }: W
   );
 }
 
-export function Textarea({ label, hint, small, className = '', ...rest }: Wrap & TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function Textarea({ label, hint, small, error, className = '', ...rest }: Wrap & TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
-    <Field label={label} hint={hint}>
-      <textarea className={inp(small, className)} {...rest} />
+    <Field label={label} hint={hint} error={error}>
+      <textarea className={inp(small, className)} aria-invalid={error ? true : undefined} {...rest} />
     </Field>
   );
 }
@@ -68,9 +115,9 @@ type SelectProps = Wrap & {
 };
 
 // Custom dropdown (see Dropdown.tsx). Lists longer than 5 options get a search box.
-export function Select({ label, hint, small, onChange, value, ...rest }: SelectProps) {
+export function Select({ label, hint, small, error, onChange, value, ...rest }: SelectProps) {
   return (
-    <Field label={label} hint={hint} custom>
+    <Field label={label} hint={hint} error={error} custom>
       <Dropdown small={small} value={value} onChange={v => onChange?.({ target: { value: v } })} {...rest} />
     </Field>
   );

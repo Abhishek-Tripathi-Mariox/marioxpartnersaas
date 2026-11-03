@@ -4,7 +4,7 @@ import { useRef, useState } from 'react';
 import { KitForm, type KitPayload } from '@/components/kit/KitForm';
 import { ResourceGrid } from '@/components/kit/ResourceGrid';
 import { Button, Icon, Modal, PageHeader, useToast } from '@/components/ui';
-import { DownloadButton } from '@/components/forms/FileUploader';
+import { DownloadButton, ViewButton } from '@/components/forms/FileUploader';
 import { api } from '@/lib/client';
 import type { Resource } from '@/types';
 
@@ -35,6 +35,7 @@ export default function AdminKitPage() {
         listRef={r => (reloadRef.current = r)}
         action={r => (
           <span className="row" style={{ gap: 6 }}>
+            {r.file && <ViewButton file={r.file} label={false} />}
             {r.file ? <DownloadButton file={r.file} /> : r.url ? <a className="x dl-btn" href={r.url} target="_blank" rel="noreferrer" aria-label="Open link"><Icon name="arrUR" size="s" /></a> : null}
             <Button size="xs" onClick={() => setEditing(r)}>Edit</Button>
             <Button size="xs" variant="danger" icon="trash" onClick={() => remove(r)} aria-label="Delete" />

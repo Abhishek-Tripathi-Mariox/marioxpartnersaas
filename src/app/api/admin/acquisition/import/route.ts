@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { handle, admin, body, ok } from '@/lib/api';
 import { HOME, add, fdt, isUrl, today as localToday } from '@/lib/acquisition';
 import { findDuplicate, getLists, newCode } from '@/lib/acquisition-server';
+import { R, all, formatPhone, parsePhone } from '@/lib/validate';
 import { AcqLead } from '@/models/AcqLead';
 
 const s = z.string().trim().max(500).optional().default('');
@@ -18,7 +19,12 @@ export const POST = handle(async req => {
   const next = Number(/\d+$/.exec(await newCode())![0]);
   const docs = [];
   const seen = new Set<string>();
-  for (const r of rows) {
+  const invalid: string[] = [];
+  for (const [n, r] of rows.entries()) {
+    // Rows that break the same rules as the Add lead form are left out and reported.
+    const bad = all(R.person)(r.name) ?? R.phone(r.phone) ?? R.email(r.email) ?? R.city(r.city) ?? R.company(r.company) ?? R.date(r.cdate) ?? R.date(r.mdate);
+    if (bad) { invalid.push(`Row ${n + 2} (${r.name}): ${bad}`); continue; }
+    if (r.phone) r.phone = formatPhone(parsePhone(r.phone).country, parsePhone(r.phone).digits);
     const key = `${r.name.toLowerCase()}|${r.company.toLowerCase()}`;
     if (seen.has(key) || (await findDuplicate(r.name, r.company))) continue;
     seen.add(key);
@@ -34,5 +40,5 @@ export const POST = handle(async req => {
     });
   }
   if (docs.length) await AcqLead.insertMany(docs);
-  return ok({ imported: docs.length, skipped: rows.length - docs.length });
+  return ok({ imported: docs.length, skipped: rows.length - docs.length - invalid.length, invalid: invalid.slice(0, 20), invalidCount: invalid.length });
 });

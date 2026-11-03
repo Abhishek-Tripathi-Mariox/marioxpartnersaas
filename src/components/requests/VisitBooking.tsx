@@ -6,6 +6,7 @@ import { useApi } from '@/hooks/useApi';
 import { useClientOptions } from '@/hooks/useClientOptions';
 import { OFFICE_INFO, OFFICES, SLOTS, TEAMS, VISIT_PURPOSES } from '@/lib/constants';
 import { date as fmtDate } from '@/lib/format';
+import { slotError, slotPassed } from '@/lib/validate';
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -50,6 +51,10 @@ export function VisitBooking({ onSubmit, list }: { onSubmit: (v: VisitValues) =>
 
   async function confirm() {
     if (!v.time) return;
+    const late = slotError(v.date, v.time, 'That slot');
+    if (late) { setError(late); setV(p => ({ ...p, time: '' })); return; }
+    if (!client) { setError('Add a client first (a lead in your pipeline)'); return; }
+    if (!(v.guests >= 1 && v.guests <= 20 && Number.isInteger(v.guests))) { setError('Guests from client side: 1 to 20'); return; }
     setBusy(true);
     setError(null);
     try {
@@ -93,9 +98,10 @@ export function VisitBooking({ onSubmit, list }: { onSubmit: (v: VisitValues) =>
         <Step n={3} title="Time slot" extra={<span className="sub" style={{ font: '400 13px var(--sans)' }}>· 90 min</span>}>
           <div className="slots">
             {SLOTS.map(t => {
-              const booked = taken.includes(t);
+              // Booked by someone else, or already over today.
+              const booked = taken.includes(t), over = slotPassed(v.date, t);
               return (
-                <button key={t} type="button" className={`slot ${v.time === t ? 'on' : ''}`} disabled={booked} aria-label={booked ? `${t} booked` : t} onClick={() => set('time', t)}>
+                <button key={t} type="button" className={`slot ${v.time === t ? 'on' : ''}`} disabled={booked || over} title={over ? 'This time has passed' : undefined} aria-label={booked ? `${t} booked` : over ? `${t} has passed` : t} onClick={() => set('time', t)}>
                   {t}
                 </button>
               );

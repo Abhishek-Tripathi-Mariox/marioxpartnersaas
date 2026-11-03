@@ -5,7 +5,7 @@ import { User } from '@/models/User';
 import { Lead } from '@/models/Lead';
 import { Project } from '@/models/Project';
 import { Booking, Scope, TechRequest, Ticket } from '@/models/Requests';
-import { emailInvite, emailWelcome, hashPassword, hashToken, publicUser } from '@/lib/users';
+import { emailInvite, emailWelcome, hashPassword, hashToken, profileFields, publicUser } from '@/lib/users';
 
 async function findUser(id: string) {
   const user = await User.findById(id);
@@ -19,16 +19,8 @@ export const GET = handle(async (_req, { id }) => {
 });
 
 const adminPatch = z.object({
-  name: z.string().min(1).optional(),
-  email: z.string().email().optional(),
-  company: z.string().optional(),
-  phone: z.string().optional(),
-  city: z.string().optional(),
-  industries: z.string().optional(),
-  pan: z.string().optional(),
-  gstin: z.string().optional(),
-  bankAccount: z.string().optional(),
-  ifsc: z.string().optional(),
+  ...profileFields,
+  email: z.string().trim().toLowerCase().email('Enter a valid email').max(254).optional(),
   status: z.enum(['invited', 'active', 'disabled']).optional(),
   commissionRate: z.number().min(0).max(1).optional(),
   password: z.string().min(8).optional(),   // admin sets a new password

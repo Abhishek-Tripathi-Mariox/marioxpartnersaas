@@ -6,6 +6,7 @@ import {
 } from '@/lib/constants';
 import { date, inr } from '@/lib/format';
 import type { RequestItem } from '@/types';
+import { R, slotError, slotPassed } from '@/lib/validate';
 
 export type RequestKind = keyof typeof REQUEST_STATUS;
 
@@ -38,14 +39,14 @@ export const REQUESTS: Record<RequestKind, Config> = {
     listTitle: 'Your submissions',
     empty: 'No scope submissions yet',
     fields: [
-      { name: 'client', label: 'Client', required: true },
-      { name: 'project', label: 'Project', required: true },
-      { name: 'needs', label: 'What the client needs', type: 'textarea', placeholder: 'Modules, platforms, integrations, timelines' },
+      { name: 'client', label: 'Client', required: true, rule: R.company },
+      { name: 'project', label: 'Project', required: true, rule: R.title },
+      { name: 'needs', label: 'What the client needs', type: 'textarea', placeholder: 'Modules, platforms, integrations, timelines', rule: R.words(5) },
       { name: 'lines', label: 'Your estimate', type: 'lines' },
     ],
     reviewFields: [
-      { name: 'approved', label: 'Approved amount (₹)', type: 'number' },
-      { name: 'comment', label: 'Comment to partner', type: 'textarea' },
+      { name: 'approved', label: 'Approved amount (₹)', type: 'number', rule: R.money('Approved amount') },
+      { name: 'comment', label: 'Comment to partner', type: 'textarea', rule: R.words(3) },
     ],
     columns: [
       { key: 'project', header: 'Project', width: 'minmax(0,1.5fr)', render: r => <><div className="strong">{s(r.project)}</div><div className="sub">{s(r.client)}</div></> },
@@ -66,17 +67,17 @@ export const REQUESTS: Record<RequestKind, Config> = {
     empty: 'No visits booked',
     fields: [
       { name: 'office', label: 'Office', type: 'chips', options: OFFICES },
-      { name: 'date', label: 'Date', type: 'date', required: true },
-      { name: 'time', label: 'Time slot · 90 min', type: 'chips', options: SLOTS },
-      { name: 'client', label: 'Client', required: true },
-      { name: 'guests', label: 'Guests from client side', type: 'number' },
+      { name: 'date', label: 'Date', type: 'date', required: true, min: 'today' },
+      { name: 'time', label: 'Time slot · 90 min', type: 'chips', options: SLOTS, optionsWhen: v => SLOTS.filter(t => !slotPassed(String(v.date), t)), check: v => slotError(String(v.date), String(v.time), 'That slot') },
+      { name: 'client', label: 'Client', required: true, rule: R.company },
+      { name: 'guests', label: 'Guests from client side', type: 'number', rule: v => (v && (+v < 0 || +v > 50 || !Number.isInteger(+v)) ? 'Guests: a whole number up to 50' : null) },
       { name: 'purpose', label: 'Purpose', type: 'chips', options: VISIT_PURPOSES },
       { name: 'team', label: 'Mariox team required in the meeting', type: 'select', options: TEAMS },
     ],
     reviewFields: [
-      { name: 'date', label: 'Date', type: 'date' },
-      { name: 'time', label: 'Time', type: 'select', options: SLOTS },
-      { name: 'comment', label: 'Comment to partner', type: 'textarea' },
+      { name: 'date', label: 'Date', type: 'date', min: 'today' },
+      { name: 'time', label: 'Time', type: 'select', options: SLOTS, optionsWhen: v => SLOTS.filter(t => !slotPassed(String(v.date), t) || t === v.time), check: v => slotError(String(v.date), String(v.time), 'That slot') },
+      { name: 'comment', label: 'Comment to partner', type: 'textarea', rule: R.words(3) },
     ],
     columns: [
       { key: 'client', header: 'Client', width: 'minmax(0,1.4fr)', render: r => <><div className="strong">{s(r.client)}</div><div className="sub">{s(r.purpose)}</div></> },
@@ -100,18 +101,18 @@ export const REQUESTS: Record<RequestKind, Config> = {
     empty: 'No tech requests yet',
     fields: [
       { name: 'type', label: 'Request type', type: 'chips', options: TECH_TYPES },
-      { name: 'client', label: 'Client', required: true },
-      { name: 'date', label: 'Preferred date', type: 'date', required: true },
-      { name: 'time', label: 'Preferred time (IST)', type: 'time' },
+      { name: 'client', label: 'Client', required: true, rule: R.company },
+      { name: 'date', label: 'Preferred date', type: 'date', required: true, min: 'today' },
+      { name: 'time', label: 'Preferred time (IST)', type: 'time', check: v => slotError(String(v.date), String(v.time)) },
       { name: 'duration', label: 'Duration', type: 'select', options: DURATIONS },
       { name: 'mode', label: 'Meeting platform', type: 'chips', options: MEET_MODES },
-      { name: 'link', label: 'Meeting link', placeholder: 'Leave blank and Mariox will send the invite', full: true },
-      { name: 'context', label: 'Context for the team', type: 'textarea', placeholder: "Client's stack, questions they've raised, decision makers in the call" },
+      { name: 'link', label: 'Meeting link', placeholder: 'Leave blank and Mariox will send the invite', full: true, rule: R.url },
+      { name: 'context', label: 'Context for the team', type: 'textarea', placeholder: "Client's stack, questions they've raised, decision makers in the call", rule: R.words(5) },
     ],
     reviewFields: [
-      { name: 'assignee', label: 'Assigned expert' },
-      { name: 'link', label: 'Meeting link' },
-      { name: 'comment', label: 'Comment to partner', type: 'textarea' },
+      { name: 'assignee', label: 'Assigned expert', rule: R.person },
+      { name: 'link', label: 'Meeting link', rule: R.url },
+      { name: 'comment', label: 'Comment to partner', type: 'textarea', rule: R.words(3) },
     ],
     columns: [
       { key: 'type', header: 'Request', width: 'minmax(0,1.4fr)', render: r => <><div className="strong">{s(r.type)}</div><div className="sub">{s(r.client)}</div></> },
@@ -135,13 +136,13 @@ export const REQUESTS: Record<RequestKind, Config> = {
     empty: 'No tickets',
     fields: [
       { name: 'category', label: 'Category', type: 'chips', options: TICKET_CATS },
-      { name: 'subject', label: 'Subject', required: true, placeholder: 'e.g. MedCare M2 commission not received', full: true },
-      { name: 'body', label: 'Details', type: 'textarea', placeholder: 'Client, project, amounts, dates' },
+      { name: 'subject', label: 'Subject', required: true, placeholder: 'e.g. MedCare M2 commission not received', full: true, rule: R.words(5, 150) },
+      { name: 'body', label: 'Details', type: 'textarea', placeholder: 'Client, project, amounts, dates', rule: R.words(5) },
       { name: 'escalate', label: "Escalate to founder's office", hint: 'For urgent payout or delivery issues', type: 'checkbox' },
     ],
     reviewFields: [
-      { name: 'assignee', label: 'Owner' },
-      { name: 'comment', label: 'Reply to partner', type: 'textarea' },
+      { name: 'assignee', label: 'Owner', rule: R.person },
+      { name: 'comment', label: 'Reply to partner', type: 'textarea', rule: R.words(3) },
     ],
     columns: [
       { key: 'code', header: 'Ticket', width: '100px', render: r => <span className="mono sub">{s(r.code)}</span> },

@@ -13,19 +13,20 @@ import { api } from '@/lib/client';
 import { date, inr, short } from '@/lib/format';
 import { earnings, pipeline } from '@/lib/metrics';
 import type { Lead, Project, RequestItem, User } from '@/types';
+import { R } from '@/lib/validate';
 
 const EDIT_FIELDS: FieldDef[] = [
-  { name: 'name', label: 'Full name', required: true },
+  { name: 'name', label: 'Full name', required: true, rule: R.person },
   { name: 'email', label: 'Email', type: 'email', required: true },
   { name: 'phone', label: 'Phone', type: 'tel' },
-  { name: 'company', label: 'Company' },
-  { name: 'city', label: 'City' },
-  { name: 'commissionPct', label: 'Commission (%)', type: 'number' },
-  { name: 'industries', label: 'Industries', full: true },
-  { name: 'pan', label: 'PAN' },
-  { name: 'gstin', label: 'GSTIN' },
-  { name: 'bankAccount', label: 'Bank account' },
-  { name: 'ifsc', label: 'IFSC' },
+  { name: 'company', label: 'Company', rule: R.company },
+  { name: 'city', label: 'City', rule: R.city },
+  { name: 'commissionPct', label: 'Commission (%)', type: 'number', rule: v => (v && (+v < 0 || +v > 100) ? 'Commission is between 0 and 100%' : null) },
+  { name: 'industries', label: 'Industries', full: true, placeholder: 'e.g. Healthcare, Retail, Logistics', rule: R.tags },
+  { name: 'pan', label: 'PAN', placeholder: 'ABCDE1234F', rule: R.pan },
+  { name: 'gstin', label: 'GSTIN', placeholder: 'Optional · 09ABCDE1234F1Z5', rule: R.gstin },
+  { name: 'bankAccount', label: 'Bank account', placeholder: '9–18 digits', rule: R.bankAccount },
+  { name: 'ifsc', label: 'IFSC', placeholder: 'HDFC0001234', rule: R.ifsc },
 ];
 
 type Tab = 'leads' | 'projects' | 'requests';

@@ -12,17 +12,18 @@ import { date, short } from '@/lib/format';
 import { earnings, pipeline } from '@/lib/metrics';
 import { LOST, WON } from '@/lib/pipeline';
 import type { Lead, Project } from '@/types';
+import { R } from '@/lib/validate';
 
 const FIELDS: FieldDef[] = [
-  { name: 'name', label: 'Full name', required: true },
-  { name: 'company', label: 'Company' },
+  { name: 'name', label: 'Full name', required: true, rule: R.person },
+  { name: 'company', label: 'Company', rule: R.company },
   { name: 'phone', label: 'Phone', type: 'tel' },
-  { name: 'city', label: 'City' },
-  { name: 'industries', label: 'Industries you sell into', full: true },
-  { name: 'pan', label: 'PAN' },
-  { name: 'gstin', label: 'GSTIN', placeholder: 'Optional' },
-  { name: 'bankAccount', label: 'Bank account number' },
-  { name: 'ifsc', label: 'IFSC' },
+  { name: 'city', label: 'City', rule: R.city },
+  { name: 'industries', label: 'Industries you sell into', full: true, placeholder: 'e.g. Healthcare, Retail, Logistics', rule: R.tags },
+  { name: 'pan', label: 'PAN', placeholder: 'ABCDE1234F', rule: R.pan },
+  { name: 'gstin', label: 'GSTIN', placeholder: 'Optional · 09ABCDE1234F1Z5', rule: R.gstin },
+  { name: 'bankAccount', label: 'Bank account number', placeholder: '9–18 digits', rule: R.bankAccount },
+  { name: 'ifsc', label: 'IFSC', placeholder: 'HDFC0001234', rule: R.ifsc },
 ];
 
 export default function ProfilePage() {

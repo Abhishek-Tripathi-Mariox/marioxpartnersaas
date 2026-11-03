@@ -1,6 +1,7 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Button, Icon } from '@/components/ui';
 
 export type Attachment = { fileId: string; name: string; size: number; type: string };
@@ -16,7 +17,51 @@ export const fileUrl = (f: Pick<Attachment, 'fileId'>) => `/api/uploads/${f.file
 export const downloadUrl = (f: Pick<Attachment, 'fileId'>) => `/api/uploads/${f.fileId}?download=1`;
 export const isImage = (f: Pick<Attachment, 'name' | 'type'>) => /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif)$/i.test(f.name);
 export const isVideo = (f: Pick<Attachment, 'name' | 'type'>) => /^video\//.test(f.type) || /\.(mp4|m4v|mov|webm)$/i.test(f.name);
+export const isPdf = (f: Pick<Attachment, 'name' | 'type'>) => f.type === 'application/pdf' || /\.pdf$/i.test(f.name);
+// Files the in-app viewer can show: images, videos (with a player) and PDFs.
+export const canView = (f: Pick<Attachment, 'name' | 'type'>) => isImage(f) || isVideo(f) || isPdf(f);
 const maxMb = (f: Pick<Attachment, 'name' | 'type'>) => (isVideo(f) ? MAX_VIDEO_MB : MAX_FILE_MB);
+
+// Full-screen viewer: video player, image or PDF, with download / open in a new tab and ← → between files.
+export function FileViewer({ files, index, onClose }: { files: Attachment[]; index: number; onClose: () => void }) {
+  const list = files.filter(canView);
+  const [i, setI] = useState(Math.max(0, list.findIndex(f => f.fileId === files[index]?.fileId)));
+  const f = list[i];
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'ArrowRight') setI(x => Math.min(list.length - 1, x + 1));
+      if (e.key === 'ArrowLeft') setI(x => Math.max(0, x - 1));
+    };
+    window.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = ''; };
+  }, [list.length, onClose]);
+  if (!f) return null;
+  return createPortal(
+    <>
+      <div className="scrim" onClick={onClose} />
+      <div className="fv" role="dialog" aria-modal="true" aria-label={f.name}>
+        <div className="fv-h">
+          <div style={{ minWidth: 0 }}><b className="ell">{f.name}</b><span className="sub mono">{fileSize(f.size)}{list.length > 1 ? ` · ${i + 1} of ${list.length}` : ''}</span></div>
+          <div className="row" style={{ gap: 6 }}>
+            <a className="btn sm" href={fileUrl(f)} target="_blank" rel="noreferrer"><Icon name="arrUR" size="s" />Open</a>
+            <a className="btn sm" href={downloadUrl(f)} download={f.name}><Icon name="download" size="s" />Download</a>
+            <button type="button" className="x" onClick={onClose} aria-label="Close"><Icon name="x" /></button>
+          </div>
+        </div>
+        <div className="fv-b">
+          {isVideo(f) ? <video key={f.fileId} src={fileUrl(f)} controls autoPlay playsInline preload="metadata" />
+            : isImage(f) ? <img key={f.fileId} src={fileUrl(f)} alt={f.name} />
+            : <iframe key={f.fileId} src={fileUrl(f)} title={f.name} />}
+          {i > 0 && <button type="button" className="fv-nav l" onClick={() => setI(i - 1)} aria-label="Previous file"><Icon name="chevL" /></button>}
+          {i < list.length - 1 && <button type="button" className="fv-nav r" onClick={() => setI(i + 1)} aria-label="Next file"><Icon name="chevR" /></button>}
+        </div>
+      </div>
+    </>,
+    document.body,
+  );
+}
 
 // Small preview: image thumbnail, first video frame, or the format badge.
 function Thumb({ file, className }: { file: Attachment; className?: string }) {
@@ -36,6 +81,21 @@ export function downloadAll(files: Attachment[]) {
       a.click();
       a.remove();
     }, i * 450),
+  );
+}
+
+// "View" / "Play" button that opens the file in the in-app viewer (nothing for files it can't show).
+export function ViewButton({ file, label = true }: { file: Attachment; label?: boolean }) {
+  const [open, setOpen] = useState(false);
+  if (!canView(file)) return null;
+  const verb = isVideo(file) ? 'Play' : 'View';
+  return (
+    <>
+      <button type="button" className={label ? 'btn xs' : 'x dl-btn'} title={`${verb} ${file.name}`} aria-label={`${verb} ${file.name}`} onClick={e => { e.stopPropagation(); setOpen(true); }}>
+        <Icon name={isVideo(file) ? 'video' : 'eye'} size="s" />{label && verb}
+      </button>
+      {open && <FileViewer files={[file]} index={0} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 
@@ -60,7 +120,9 @@ export function DownloadAllButton({ files, small }: { files: Attachment[]; small
 
 // One attached file: image thumbnail or format badge, name, size.
 // With `href`: the row opens the file and a separate button downloads it.
-export function FileChip({ file, onRemove, href }: { file: Attachment; onRemove?: () => void; href?: string }) {
+export function FileChip({ file, onRemove, href, onView }: { file: Attachment; onRemove?: () => void; href?: string; onView?: () => void }) {
+  const [viewing, setViewing] = useState(false);
+  const view = canView(file) ? (onView ?? (() => setViewing(true))) : null;
   const body = (
     <>
       <Thumb file={file} className="file-thumb" />
@@ -70,10 +132,14 @@ export function FileChip({ file, onRemove, href }: { file: Attachment; onRemove?
   );
   return (
     <div className="file-chip">
-      {href ? <a href={href} target="_blank" rel="noreferrer" className="row" style={{ gap: 10, flex: 1, minWidth: 0 }} title="Open">{body}</a> : <span className="row" style={{ gap: 10, flex: 1, minWidth: 0 }}>{body}</span>}
-      {href && <a className="x dl-btn" href={href} target="_blank" rel="noreferrer" title="Open" aria-label={`Open ${file.name}`}><Icon name="arrUR" size="s" /></a>}
+      {href && view ? <button type="button" className="row file-open" style={{ gap: 10, flex: 1, minWidth: 0 }} title={isVideo(file) ? 'Play' : 'View'} onClick={e => { e.stopPropagation(); view(); }}>{body}</button>
+        : href ? <a href={href} target="_blank" rel="noreferrer" className="row" style={{ gap: 10, flex: 1, minWidth: 0 }} title="Open">{body}</a>
+        : <span className="row" style={{ gap: 10, flex: 1, minWidth: 0 }}>{body}</span>}
+      {href && view && <button type="button" className="x dl-btn" title={isVideo(file) ? 'Play' : 'View'} aria-label={`${isVideo(file) ? 'Play' : 'View'} ${file.name}`} onClick={e => { e.stopPropagation(); view(); }}><Icon name={isVideo(file) ? 'video' : 'eye'} size="s" /></button>}
+      {href && !view && <a className="x dl-btn" href={href} target="_blank" rel="noreferrer" title="Open" aria-label={`Open ${file.name}`}><Icon name="arrUR" size="s" /></a>}
       {href && <DownloadButton file={file} />}
       {onRemove && <button type="button" className="x" style={{ width: 28, height: 28 }} onClick={onRemove} aria-label={`Remove ${file.name}`}><Icon name="x" size="s" /></button>}
+      {viewing && <FileViewer files={[file]} index={0} onClose={() => setViewing(false)} />}
     </div>
   );
 }
@@ -81,15 +147,24 @@ export function FileChip({ file, onRemove, href }: { file: Attachment; onRemove?
 // Read-only list of attachments: images and videos (playable) as a grid, other files as chips, each with Open and Download.
 // `compact` is the small inline version used in tables and lists.
 export function AttachmentList({ files, compact }: { files?: Attachment[] | null; compact?: boolean }) {
+  const [viewing, setViewing] = useState<number | null>(null);
   if (!files?.length) return compact ? <span className="sub">—</span> : null;
+  const viewer = viewing !== null && <FileViewer files={files} index={viewing} onClose={() => setViewing(null)} />;
+  const open = (f: Attachment) => setViewing(files.indexOf(f));
   if (compact) {
     return (
       <span className="row wrap" style={{ gap: 6 }} onClick={e => e.stopPropagation()}>
-        {files.map(f => (
-          <a key={f.fileId} className="file-mini" href={fileUrl(f)} target="_blank" rel="noreferrer" title={`Open ${f.name} · ${fileSize(f.size)}`}>
-            <Thumb file={f} />
-          </a>
-        ))}
+        {files.map(f =>
+          canView(f) ? (
+            <button key={f.fileId} type="button" className={`file-mini ${isVideo(f) ? 'is-video' : ''}`} title={`${isVideo(f) ? 'Play' : 'View'} ${f.name} · ${fileSize(f.size)}`} onClick={() => open(f)}>
+              <Thumb file={f} />
+            </button>
+          ) : (
+            <a key={f.fileId} className="file-mini" href={fileUrl(f)} target="_blank" rel="noreferrer" title={`Open ${f.name} · ${fileSize(f.size)}`}>
+              <Thumb file={f} />
+            </a>
+          ),
+        )}
         {files.length > 1 ? (
           <button type="button" className="x dl-btn" title={`Download all ${files.length} files`} aria-label="Download all files" onClick={e => { e.stopPropagation(); downloadAll(files); }}>
             <Icon name="download" size="s" />
@@ -97,6 +172,7 @@ export function AttachmentList({ files, compact }: { files?: Attachment[] | null
         ) : (
           <DownloadButton file={files[0]} />
         )}
+        {viewer}
       </span>
     );
   }
@@ -109,13 +185,10 @@ export function AttachmentList({ files, compact }: { files?: Attachment[] | null
         <div className="img-grid">
           {media.map(f => (
             <div key={f.fileId} className="img-tile">
-              {isVideo(f) ? (
-                <video src={fileUrl(f)} controls preload="metadata" playsInline />
-              ) : (
-                <a href={fileUrl(f)} target="_blank" rel="noreferrer" title={`Open ${f.name}`}>
-                  <img src={fileUrl(f)} alt={f.name} loading="lazy" />
-                </a>
-              )}
+              <button type="button" className={`img-open ${isVideo(f) ? 'is-video' : ''}`} title={`${isVideo(f) ? 'Play' : 'View'} ${f.name}`} onClick={() => open(f)}>
+                {isVideo(f) ? <video src={`${fileUrl(f)}#t=0.5`} preload="metadata" muted playsInline /> : <img src={fileUrl(f)} alt={f.name} loading="lazy" />}
+                {isVideo(f) && <span className="play"><Icon name="video" /></span>}
+              </button>
               <div className="between" style={{ gap: 4, padding: '0 4px 4px 8px' }}>
                 <span>{f.name}</span>
                 <DownloadButton file={f} />
@@ -124,7 +197,8 @@ export function AttachmentList({ files, compact }: { files?: Attachment[] | null
           ))}
         </div>
       )}
-      {others.map(f => <FileChip key={f.fileId} file={f} href={fileUrl(f)} />)}
+      {others.map(f => <FileChip key={f.fileId} file={f} href={fileUrl(f)} onView={() => open(f)} />)}
+      {viewer}
     </div>
   );
 }

@@ -93,8 +93,13 @@ export function NextTxt({ l, now }: { l: AcqLead; now: number }) {
   );
 }
 
-export function Field({ label, children, span }: { label: string; children: ReactNode; span?: boolean }) {
-  return <label className="field" style={span ? { gridColumn: '1/-1' } : undefined}><span>{label}</span>{children}</label>;
+export function Field({ label, children, span, error }: { label: string; children: ReactNode; span?: boolean; error?: string | null }) {
+  return (
+    <label className={`field ${error ? 'has-err' : ''}`} style={span ? { gridColumn: '1/-1' } : undefined}>
+      <span>{label}</span>{children}
+      {error && <small className="field-err" role="alert">{error}</small>}
+    </label>
+  );
 }
 
 export const G2 = ({ children }: { children: ReactNode }) => (
@@ -109,7 +114,7 @@ export function DateQuick({ value, onChange }: { value: string; onChange: (v: st
         const d = add(today(), n);
         return <button key={n} type="button" className={`chip sm ${value === d ? 'on' : ''}`} onClick={() => onChange(d)}>{l}</button>;
       })}
-      <input type="date" className="inp sm" value={value} onChange={e => onChange(e.target.value)} />
+      <input type="date" className="inp sm" min={today()} max="2100-12-31" value={value} onChange={e => onChange(e.target.value)} />
     </div>
   );
 }

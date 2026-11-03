@@ -8,14 +8,15 @@ import { useList } from '@/hooks/useList';
 import { api } from '@/lib/client';
 import { date } from '@/lib/format';
 import type { User } from '@/types';
+import { R } from '@/lib/validate';
 
 const NEW_FIELDS: FieldDef[] = [
-  { name: 'name', label: 'Full name', required: true },
+  { name: 'name', label: 'Full name', required: true, rule: R.person },
   { name: 'email', label: 'Email', type: 'email', required: true },
   { name: 'phone', label: 'Phone', type: 'tel' },
-  { name: 'company', label: 'Company' },
-  { name: 'city', label: 'City' },
-  { name: 'password', label: 'Password', required: true, placeholder: 'At least 8 characters', hint: 'Emailed to the partner with the portal link' },
+  { name: 'company', label: 'Company', rule: R.company },
+  { name: 'city', label: 'City', rule: R.city },
+  { name: 'password', label: 'Password', required: true, placeholder: 'At least 8 characters', hint: 'Emailed to the partner with the portal link', rule: v => (v.length < 8 ? 'Use at least 8 characters' : null) },
 ];
 
 const STATUS_TABS = [

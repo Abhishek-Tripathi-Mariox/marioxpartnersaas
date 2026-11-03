@@ -5,6 +5,7 @@ import { FileUploader, type Attachment } from '@/components/forms/FileUploader';
 import { Button, FormError, Input, Textarea } from '@/components/ui';
 import { useForm } from '@/hooks/useForm';
 import { inr } from '@/lib/format';
+import { R, all } from '@/lib/validate';
 
 type Line = { name: string; amount: number };
 type Values = { client: string; project: string; needs: string; attachments: Attachment[]; lines: Line[] };
@@ -14,7 +15,10 @@ export const SCOPE_FORM_ID = 'scope-form';
 // "New scope" form from the original portal: details, attachments, priced scope items and a live total.
 // The submit button lives in the drawer footer and targets this form by id.
 export function ScopeForm({ rate, onSubmit, onBusy }: { rate: number; onSubmit: (v: Values) => Promise<unknown>; onBusy?: (busy: boolean) => void }) {
-  const form = useForm<Values>({ client: '', project: '', needs: '', attachments: [], lines: [{ name: '', amount: 0 }] });
+  const form = useForm<Values>(
+    { client: '', project: '', needs: '', attachments: [], lines: [{ name: '', amount: 0 }] },
+    { client: all(R.required('Client name'), R.company), project: all(R.required('Project title'), R.title), needs: R.words(5) },
+  );
   useEffect(() => onBusy?.(form.busy), [form.busy, onBusy]);
   const { values: v, set } = form;
   const total = v.lines.reduce((a, l) => a + (Number(l.amount) || 0), 0);
@@ -28,6 +32,10 @@ export function ScopeForm({ rate, onSubmit, onBusy }: { rate: number; onSubmit: 
       onSubmit={form.submit(async values => {
         const lines = values.lines.filter(l => l.name.trim() || l.amount);
         if (!lines.length) throw new Error('Add at least one scope item with an amount');
+        for (const [i, l] of lines.entries()) {
+          if (!l.name.trim() || R.words(2, 120)(l.name.trim())) throw new Error(`Item ${i + 1}: name the module in words, e.g. Admin panel`);
+          if (!(l.amount > 0) || l.amount > 1e10) throw new Error(`Item ${i + 1}: enter an amount above ₹0`);
+        }
         await onSubmit({ ...values, lines });
       })}
     >

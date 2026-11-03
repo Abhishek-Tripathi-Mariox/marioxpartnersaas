@@ -5,6 +5,7 @@ import { Button, Chips, FormError, Input, Toggle } from '@/components/ui';
 import { useForm } from '@/hooks/useForm';
 import { RESOURCE_TYPES } from '@/lib/constants';
 import type { Resource } from '@/types';
+import { R, all } from '@/lib/validate';
 
 type Values = { title: string; type: string; industry: string; format: string; size: string; url: string; hidden: boolean; files: Attachment[] };
 export type KitPayload = Omit<Values, 'files'> & { file: Attachment | null };
@@ -12,7 +13,8 @@ export type KitPayload = Omit<Values, 'files'> & { file: Attachment | null };
 // Admin form for a sales kit item. Upload the file (stored on S3) or give an external link.
 // Format and size fill in from the uploaded file.
 export function KitForm({ initial, onSubmit, onCancel }: { initial: Partial<Resource>; onSubmit: (v: KitPayload) => Promise<unknown>; onCancel: () => void }) {
-  const form = useForm<Values>({
+  const form = useForm<Values>(
+    {
     title: initial.title ?? '',
     type: initial.type ?? RESOURCE_TYPES[0],
     industry: initial.industry ?? 'All',
@@ -21,7 +23,15 @@ export function KitForm({ initial, onSubmit, onCancel }: { initial: Partial<Reso
     url: initial.url ?? '',
     hidden: initial.hidden ?? false,
     files: initial.file ? [initial.file] : [],
-  });
+    },
+    {
+      title: all(R.required('Title'), R.title),
+      industry: R.tags,
+      format: v => (!v || /^[A-Za-z0-9]{2,6}$/.test(v) ? null : 'Format is a short file type, e.g. PDF'),
+      size: v => (!v || /^\d+(\.\d+)?\s?(KB|MB|GB)$/i.test(v) ? null : 'Size looks like 4.2 MB'),
+      url: R.url,
+    },
+  );
   const { values: v, set } = form;
 
   function onFiles(files: Attachment[]) {

@@ -6,7 +6,8 @@ import { api } from '@/lib/client';
 import { OPTS, add, rel, t12, today, type AcqLead, type AcqLists, type UpdateOpt } from '@/lib/acquisition';
 import type { IconName } from '@/components/ui';
 import { DateQuick, Field, G2, Option, Pill, Radios, TempPick } from './bits';
-import { MeetFields, meetDraft, ordered, type MeetDraft } from './MeetFields';
+import { MeetFields, meetDraft, meetErrors, ordered, type MeetDraft } from './MeetFields';
+import { R, notPast } from '@/lib/validate';
 
 export type ConvertedPartner = { id: string; code?: string; setPasswordUrl: string | null; linked: boolean };
 type Props = {
@@ -39,6 +40,7 @@ export function UpdateDialog({ lead: l, pre, lists, onClose, onSaved }: Props) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [meetErr, setMeetErr] = useState<Record<string, string | null>>({});
 
   const step =
     l.status === 'contacted' ? `Contacted ${rel(l.contactedAt).toLowerCase()} on ${l.channel || '—'}`
@@ -47,6 +49,17 @@ export function UpdateDialog({ lead: l, pre, lists, onClose, onSaved }: Props) {
 
   async function save() {
     if (opt === 'reject' && !reason) return setError('Pick a reason. It shows in “Why rejected”');
+    // Same checks as the API: a meeting ahead of now, a follow-up not in the past, signed on not in the future.
+    if (opt === 'meet' || opt === 'move') {
+      const e = meetErrors(meets[opt]);
+      setMeetErr(e);
+      if (Object.values(e).some(Boolean)) return setError(Object.values(e).find(Boolean)!);
+    }
+    if (opt === 'done' || opt === 'again' || opt === 'later') { const e = notPast(next[opt], 'Next follow-up'); if (e) return setError(e); }
+    if (opt === 'convert') {
+      if (R.email(email.trim())) return setError(R.email(email.trim())!);
+      if (R.date(convertedAt) || convertedAt > today()) return setError("Signed on can't be in the future");
+    }
     if (opt === 'convert' && !email.trim()) return setError('Add their email: it is their partner login');
     setBusy(true);
     setError(null);
@@ -75,7 +88,7 @@ export function UpdateDialog({ lead: l, pre, lists, onClose, onSaved }: Props) {
               <Radios options={[['missed', 'They didn’t join (missed)'], ['moved', 'Rescheduled']]} value={why} onChange={v => setWhy(v as 'missed' | 'moved')} />
             </>
           )}
-          <MeetFields value={meets[k]} onChange={m => setMeets(p => ({ ...p, [k]: m }))} team={lists.team} />
+          <MeetFields value={meets[k]} onChange={m => { setMeets(p => ({ ...p, [k]: m })); setMeetErr({}); }} team={lists.team} errors={meetErr} />
         </>
       );
     if (k === 'done' || k === 'again' || k === 'later')
@@ -89,7 +102,7 @@ export function UpdateDialog({ lead: l, pre, lists, onClose, onSaved }: Props) {
       return (
         <>
           <G2>
-            <Field label="Signed on"><input className="inp" type="date" value={convertedAt} onChange={e => setConvertedAt(e.target.value)} /></Field>
+            <Field label="Signed on"><input className="inp" type="date" max={today()} min="2000-01-01" value={convertedAt} onChange={e => setConvertedAt(e.target.value)} /></Field>
             <Field label="Email (for their login)"><input className="inp" type="email" inputMode="email" placeholder="name@company.com" value={email} onChange={e => setEmail(e.target.value)} /></Field>
           </G2>
         </>

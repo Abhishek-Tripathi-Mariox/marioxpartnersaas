@@ -3,11 +3,23 @@
 import { useState } from 'react';
 import { ListEditor, TagEditor } from '@/components/admin/ListEditor';
 import { useSettings, type PortalSettings } from '@/components/SettingsProvider';
-import { Badge, Button, Card, FormError, Input, PageHeader, Select, Tabs, Textarea, useToast, SkeletonCards } from '@/components/ui';
+import { Badge, Button, Card, FormError, Input, PageHeader, PhoneInput, Select, Tabs, Textarea, useToast, SkeletonCards } from '@/components/ui';
 import { useForm } from '@/hooks/useForm';
 import { api } from '@/lib/client';
 import { TONES, stageColor, type ToneName } from '@/lib/pipeline';
 import type { Contact } from '@/types';
+import { R, all } from '@/lib/validate';
+
+// Each leadership contact is shown to every partner, so it has to be complete and real.
+const CONTACT_RULES: Record<keyof Contact, ((v: string) => string | null) | undefined> = {
+  title: all(R.required('Title'), R.words(2, 60)),
+  name: all(R.required('Name'), R.person),
+  role: R.words(2, 80),
+  phone: all(R.required('Phone'), R.phone),
+  email: all(R.required('Email'), R.email),
+  note: undefined,
+};
+const contactErrors = (c: Contact) => Object.fromEntries(Object.entries(CONTACT_RULES).map(([k, r]) => [k, r?.(String(c[k as keyof Contact] ?? '').trim()) ?? null])) as Record<keyof Contact, string | null>;
 
 type Section = 'pipeline' | 'contacts';
 const TONE_LABEL: Record<ToneName, string> = { bad: 'Red', warn: 'Amber', info: 'Blue', good: 'Green', violet: 'Violet', fire: 'Orange', mute: 'Grey' };
@@ -17,12 +29,16 @@ function SettingsForm({ initial }: { initial: PortalSettings }) {
   const toast = useToast();
   const { reload } = useSettings();
   const [section, setSection] = useState<Section>('pipeline');
+  const [checked, setChecked] = useState(false); // show contact errors after the first save attempt
   const form = useForm<PortalSettings>(initial);
   const { values: v, set } = form;
   const pipe = v.pipeline;
   const setPipe = (patch: Partial<PortalSettings['pipeline']>) => set('pipeline', { ...pipe, ...patch });
 
   const save = form.submit(async values => {
+    setChecked(true);
+    const bad = values.contacts.findIndex(c => Object.values(contactErrors(c)).some(Boolean));
+    if (bad >= 0) { setSection('contacts'); throw new Error(`Contact ${bad + 1}: fix the highlighted fields`); }
     const { settings } = await api.put<{ settings: PortalSettings }>('/api/settings', values);
     form.setValues(settings);
     await reload();
@@ -97,16 +113,19 @@ function SettingsForm({ initial }: { initial: PortalSettings }) {
               blank={blankContact}
               addLabel="Add contact"
               min={0}
-              render={(c, update) => (
+              render={(c, update) => {
+                const err = checked ? contactErrors(c) : ({} as Partial<Record<keyof Contact, string | null>>);
+                return (
                 <div className="grid-f" style={{ width: '100%' }}>
-                  <Input small label="Title" placeholder="Founder" value={c.title} onChange={e => update({ title: e.target.value })} />
-                  <Input small label="Name" value={c.name} onChange={e => update({ name: e.target.value })} />
-                  <Input small label="Role" value={c.role} onChange={e => update({ role: e.target.value })} />
-                  <Input small label="Phone" value={c.phone} onChange={e => update({ phone: e.target.value })} />
-                  <Input small label="Email" value={c.email} onChange={e => update({ email: e.target.value })} />
-                  <Input small label="When to contact" value={c.note} onChange={e => update({ note: e.target.value })} />
+                  <Input small label="Title" placeholder="Founder" value={c.title} error={err.title} onChange={e => update({ title: e.target.value })} />
+                  <Input small label="Name" placeholder="e.g. Rahul Sharma" value={c.name} error={err.name} onChange={e => update({ name: e.target.value })} />
+                  <Input small label="Role" placeholder="e.g. Head of partnerships" value={c.role} error={err.role} onChange={e => update({ role: e.target.value })} />
+                  <PhoneInput small label="Phone" value={c.phone} error={err.phone} onChange={e => update({ phone: e.target.value })} />
+                  <Input small label="Email" type="email" placeholder="name@marioxsoftware.com" value={c.email} error={err.email} onChange={e => update({ email: e.target.value })} />
+                  <Input small label="When to contact" value={c.note} maxLength={300} onChange={e => update({ note: e.target.value })} />
                 </div>
-              )}
+                );
+              }}
             />
           </Card>
         </>

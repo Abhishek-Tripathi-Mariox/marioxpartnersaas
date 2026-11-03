@@ -5,6 +5,7 @@ import { User } from '@/models/User';
 import { HttpError } from './api';
 import { nextCode } from './codes';
 import { createPartner } from './users';
+import { R, istToday, notPast, slotError, zPhone, zs } from './validate';
 import { ACQ_LIST_KEYS, HOME, MTYPE, OPEN, OPTS, add, fdt, isDay, t12, today as localToday, withDefaults, type AcqLead as Lead, type AcqLists, type Meet, type Step, type TeamEmails, type UpdateOpt } from './acquisition';
 
 // Server side of partner acquisition. The browser sends its own "today" so dates match the team's day.
@@ -14,14 +15,20 @@ const str = z.string().trim().max(500).optional().default('');
 const day = z.string().regex(/^\d{4}-\d\d-\d\d$/);
 const meetSchema = z.object({
   date: day.optional(),
-  time: str,
-  link: str,
+  time: zs(R.time, false, 5).default(''),
+  link: zs(R.url, false, 500).default(''),
   attendees: z.array(z.string()).max(20).optional().default([]),
   duration: z.number().int().min(5).max(480).optional().default(30),
   type: z.string().trim().max(60).optional().default(MTYPE[0]),
   prep: z.array(z.string().max(60)).max(20).optional().default([]),
   agenda: z.string().trim().max(500).optional().default(''),
 });
+// A meeting being booked or moved has to be ahead of now (IST).
+const slotCheck = (m: { date?: string; time?: string } | undefined, what = 'The meeting time') => {
+  if (!m?.date) return;
+  const e = slotError(m.date, m.time ?? '', what);
+  if (e) throw new HttpError(400, e);
+};
 type MeetIn = z.infer<typeof meetSchema>;
 // A booked meeting as stored; `invited` resets whenever the meeting is (re)booked.
 const toMeet = (m: MeetIn, fallbackDate: string, invited = false): Meet => ({ ...m, date: m.date || fallbackDate, time: m.time || '16:00', invited });
@@ -29,20 +36,21 @@ const toMeet = (m: MeetIn, fallbackDate: string, invited = false): Meet => ({ ..
 const url = (u: string) => (u && !/^https?:\/\//i.test(u) ? 'https://' + u : u);
 
 export const leadFields = z.object({
-  name: z.string().trim().min(1, 'Add the name').max(120),
-  company: str,
+  name: zs(R.person, true, 80),
+  company: zs(R.company, false, 120).default(''),
   source: str,
   channel: str,
   owner: str,
   contactedAt: day,
-  phone: z.string().trim().max(40).optional().default(''),
-  email: z.union([z.literal(''), z.string().trim().email('Email looks wrong')]).optional().default(''),
-  linkedin: str,
+  phone: zPhone().default(''),
+  email: zs(R.email, false, 254).default(''),
+  // "linkedin.com/in/x" is accepted and saved as https://…
+  linkedin: zs(v => R.url(v && !/^https?:\/\//i.test(v) ? 'https://' + v : v), false, 300).default(''),
   notes: z.string().max(4000).optional().default(''),
   services: z.array(z.string()).max(30).optional().default([]),
   temp: z.enum(['hot', 'warm', 'cold']).default('warm'),
   country: z.string().trim().max(60).optional().default(HOME),
-  city: str,
+  city: zs(R.city, false, 60).default(''),
 });
 
 // With a meeting date the lead goes straight to Meeting; without one it is a Lead with a next step.
@@ -128,6 +136,9 @@ export async function applyUpdate(l: Lead, u: UpdateInput) {
   const steps: Step[] = l.steps;
   let partner: Awaited<ReturnType<typeof makePartner>> | null = null;
 
+  if (k === 'meet' || k === 'move') slotCheck(u.meet ?? { date: add(t, 1) });
+  if ((k === 'done' || k === 'again' || k === 'later') && u.next) { const e = notPast(u.next, 'Next follow-up'); if (e) throw new HttpError(400, e); }
+  if (k === 'convert' && u.convertedAt && u.convertedAt > istToday()) throw new HttpError(400, "Signed on can't be in the future");
   if (k === 'meet' || k === 'move') {
     const was = l.meet?.date, missed = k === 'move' && u.why !== 'moved';
     l.meet = u.meet ? toMeet(u.meet, add(t, 1)) : { ...l.meet, date: add(t, 1), invited: false };
@@ -179,10 +190,15 @@ export function startLead(r: z.infer<typeof createSchema>, code: string) {
   void force; void today;
   const l: Omit<Lead, '_id'> = { ...fields, linkedin: url(fields.linkedin), code, status: 'contacted', steps: [{ k: 'contacted', date: r.contactedAt, note: `Contacted on ${r.channel}` }], meet: { duration: 30, attendees: [] } };
   if (meet?.date) {
+    slotCheck(meet);
     l.status = 'meeting';
     l.meet = toMeet({ ...meet, attendees: meet.attendees.length ? meet.attendees : [r.owner].filter(Boolean) }, add(t, 1));
     l.steps.push({ k: 'meeting', date: t, note: `${l.meet.type} on ${fdt(l.meet.date)} ${t12(l.meet.time)}` });
-  } else l.next = next || add(t, 1);
+  } else {
+    const e = next ? notPast(next, 'Next step') : null;
+    if (e) throw new HttpError(400, e);
+    l.next = next || add(t, 1);
+  }
   return l;
 }
 
@@ -193,6 +209,7 @@ export function editLead(l: Lead, fields: z.infer<typeof leadFields>, meet: Meet
   if (c) c.date = fields.contactedAt;
   if (!meet?.date || !OPEN.includes(l.status)) return false;
   const changed = l.status !== 'meeting' || l.meet.date !== meet.date || l.meet.time !== meet.time;
+  if (changed) slotCheck(meet);
   l.meet = toMeet({ ...meet, attendees: meet.attendees.length ? meet.attendees : [l.owner].filter(Boolean) as string[] }, meet.date, changed ? false : !!l.meet.invited);
   if (l.status !== 'meeting') {
     l.status = 'meeting';

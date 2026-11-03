@@ -4,17 +4,19 @@ import { z } from 'zod';
 import { User } from '@/models/User';
 import { HttpError } from './api';
 import { nextCode } from './codes';
+import { R, zPhone, zs, zUpper } from './validate';
 import { partnerInvite, partnerWelcome } from './emails';
 import { sendMail } from './mail';
 
+// Also used by the main-site API (POST /api/v1/users), so the same rules apply there.
 export const newPartnerSchema = z.object({
-  name: z.string().min(1),
-  email: z.string().email(),
-  password: z.string().min(8).optional(),
-  phone: z.string().optional(),
-  company: z.string().optional(),
-  city: z.string().optional(),
-  industries: z.string().optional(),
+  name: zs(R.person, true, 80),
+  email: z.string().trim().toLowerCase().email('Enter a valid email').max(254),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(128).optional(),
+  phone: zPhone(),
+  company: zs(R.company, false, 120),
+  city: zs(R.city, false, 60),
+  industries: zs(R.tags, false, 200),
   externalId: z.string().optional(),
   commissionRate: z.number().min(0).max(1).optional(),
 });
@@ -67,3 +69,16 @@ export function emailWelcome(user: { name: string; email: string; partnerCode?: 
   const loginUrl = `${(process.env.APP_URL || 'http://localhost:3000').trim().replace(/\/$/, '')}/login`;
   return sendMail({ to: user.email, ...partnerWelcome({ name: user.name, email: user.email, partnerCode: user.partnerCode, password, loginUrl, reset }) });
 }
+
+// Contact and payout details a partner (or an admin for them) can edit. Codes are stored in capitals.
+export const profileFields = {
+  name: zs(R.person, true, 80).optional(),
+  phone: zPhone(),
+  company: zs(R.company, false, 120),
+  city: zs(R.city, false, 60),
+  industries: zs(R.tags, false, 200),
+  pan: zUpper(R.pan),
+  gstin: zUpper(R.gstin),
+  bankAccount: zs(R.bankAccount, false, 18),
+  ifsc: zUpper(R.ifsc),
+};

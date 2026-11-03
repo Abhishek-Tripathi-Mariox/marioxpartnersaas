@@ -199,8 +199,9 @@ export function ImportDialog({ leads, onClose, onDone }: { leads: AcqLead[]; onC
     if (!rows) return;
     setBusy(true);
     try {
-      const r = await api.post<{ imported: number }>('/api/admin/acquisition/import', { rows: rows.filter(x => !isDup(x)), today: today() });
-      onDone(`${r.imported} lead${r.imported === 1 ? '' : 's'} imported`);
+      const r = await api.post<{ imported: number; invalid: string[]; invalidCount: number }>('/api/admin/acquisition/import', { rows: rows.filter(x => !isDup(x)), today: today() });
+      if (r.invalidCount && !r.imported) { setError(`Nothing imported. ${r.invalid.join(' · ')}`); setBusy(false); return; }
+      onDone(`${r.imported} lead${r.imported === 1 ? '' : 's'} imported${r.invalidCount ? ` · ${r.invalidCount} row${r.invalidCount === 1 ? '' : 's'} skipped (${r.invalid[0]})` : ''}`);
     } catch (e) {
       setError((e as Error).message);
       setBusy(false);

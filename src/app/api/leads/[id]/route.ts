@@ -5,6 +5,7 @@ import { leadSchema, today } from '@/lib/schemas';
 import { getPipeline, stageKeys } from '@/lib/settings';
 import { Lead } from '@/models/Lead';
 import { User } from '@/models/User';
+import { R, notPast, zs } from '@/lib/validate';
 
 async function findLead(id: string) {
   const s = await session();
@@ -21,8 +22,9 @@ export const GET = handle(async (_req, { id }) => {
 
 const patch = leadSchema.partial().extend({
   // Lead tasks and activities are edited through the same PATCH to keep the client simple.
-  addActivity: z.object({ type: z.string(), text: z.string().min(1) }).optional(),
-  addTask: z.object({ text: z.string().min(1), due: z.string().optional() }).optional(),
+  // Logged calls / notes need real words (not just a phone number); a follow-up can't be due in the past.
+  addActivity: z.object({ type: z.enum(['call', 'meeting', 'email', 'note']), text: zs(R.words(3, 1000), true, 1000) }).optional(),
+  addTask: z.object({ text: zs(R.words(2, 200), true, 200), due: zs(v => notPast(v, 'Due date'), false, 10) }).optional(),
   toggleTask: z.string().optional(),
   removeTask: z.string().optional(),
 });
@@ -36,6 +38,10 @@ export const PATCH = handle(async (req, { id }) => {
     if (!stageKeys(pipe).includes(fields.stage)) throw new HttpError(400, 'Unknown stage');
     const text = fields.stage === LOST ? `Marked lost: ${fields.lostReason || 'Not specified'}` : `Moved to ${stageName(pipe, fields.stage)}`;
     lead.activities.unshift({ type: fields.stage === WON ? 'won' : 'stage', text, date: today() });
+  }
+  if (fields.expectedClose && fields.expectedClose !== lead.expectedClose) {
+    const e = notPast(fields.expectedClose, 'Expected close');
+    if (e) throw new HttpError(400, e);
   }
   lead.set(fields);
 

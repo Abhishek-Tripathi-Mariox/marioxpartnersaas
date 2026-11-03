@@ -204,3 +204,34 @@ video.file-thumb { width: 36px; height: 36px; }
 .fp-link { color: var(--accent); font-weight: 600; font-size: 13.5px; }
 .fp-link:hover { text-decoration: underline; }
 .fp-head { display: flex; flex-direction: column; }
+
+/* field validation */
+.field .field-err { color: var(--bad); font-weight: 500; }
+.field.has-err .inp, .field.has-err .dd-btn, .inp[aria-invalid="true"] { box-shadow: 0 0 0 1.5px var(--bad) inset; }
+/* phone: country code + number */
+.ph-wrap { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 6px; }
+.ph-wrap .ph-cc { min-width: 0; }
+.ph-wrap .ph-num { width: 100%; letter-spacing: .02em; }
+
+/* in-app file viewer: video player, image, PDF */
+.fv { position: fixed; inset: 24px; z-index: 75; display: flex; flex-direction: column; background: var(--panel); border-radius: 22px; box-shadow: var(--sh-3), 0 0 0 1px var(--line); overflow: hidden; animation: pop .35s var(--spring) both; }
+.fv-h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px 12px 20px; border-bottom: 1px solid var(--line); }
+.fv-h b { display: block; font-size: 15px; max-width: 60vw; }
+.fv-h .sub { font-size: 12px; }
+.fv-b { position: relative; flex: 1; min-height: 0; display: grid; place-items: center; background: #0b0c10; }
+.fv-b video, .fv-b img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.fv-b iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+.fv-nav { position: absolute; top: 50%; transform: translateY(-50%); width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,.14); color: #fff; }
+.fv-nav:hover { background: rgba(255,255,255,.26); }
+.fv-nav.l { left: 14px; } .fv-nav.r { right: 14px; }
+@media (max-width: 720px) { .fv { inset: 0; border-radius: 0; } .fv-h .btn .i + * { display: none; } }
+.img-grid .img-open { position: relative; display: block; width: 100%; padding: 0; overflow: hidden; cursor: zoom-in; }
+.img-grid .img-open.is-video { cursor: pointer; }
+.img-grid .img-open video { width: 100%; aspect-ratio: 4/3; object-fit: cover; background: #000; display: block; }
+.img-grid .img-open:hover img { transform: scale(1.04); }
+.img-open .play, .file-mini.is-video::after { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; background: rgba(0,0,0,.28); }
+.img-open .play .i { width: 30px; height: 30px; }
+.file-mini { position: relative; padding: 0; }
+.file-mini.is-video::after { content: "▶"; font-size: 11px; }
+.file-open { text-align: left; color: inherit; background: none; padding: 0; cursor: zoom-in; }
+.copy { word-break: break-all; }

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { R, zPhone, zs } from '@/lib/validate';
 import { handle, session, admin, body, ok, HttpError } from '@/lib/api';
 import { LOST, WON, slug, type PipelineConfig } from '@/lib/pipeline';
 import { pipelineSchema } from '@/lib/schemas';
@@ -8,7 +9,7 @@ import { Lead } from '@/models/Lead';
 
 const settingsSchema = z.object({
   contacts: z
-    .array(z.object({ title: z.string(), name: z.string(), role: z.string(), phone: z.string(), email: z.string(), note: z.string() }))
+    .array(z.object({ title: zs(R.words(2, 60), true, 60), name: zs(R.person, true, 80), role: zs(R.words(2, 80), false, 80), phone: zPhone(true), email: zs(R.email, true, 254), note: zs(undefined, false, 300) }))
     .optional(),
   announcement: z.string().optional(),
   pipeline: pipelineSchema.optional(),

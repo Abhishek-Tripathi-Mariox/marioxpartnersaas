@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { handle, session, body, ok, scope, HttpError } from '@/lib/api';
 import { deleteFile } from '@/lib/files';
 import { requestKind } from '@/lib/requests';
-import { requestReview } from '@/lib/schemas';
+import { requestReview, reviewSlotError } from '@/lib/schemas';
 
 // Admin reviews a request: status, comment, assignee, approved amount, rescheduled time.
 export const PATCH = handle(async (req, { kind, id }) => {
@@ -22,7 +22,10 @@ export const PATCH = handle(async (req, { kind, id }) => {
     return ok({ item });
   }
 
-  const item = await model.findByIdAndUpdate(id, await body(req, requestReview), { new: true });
+  const review = await body(req, requestReview);
+  const late = reviewSlotError(review);
+  if (late) throw new HttpError(400, late);
+  const item = await model.findByIdAndUpdate(id, review, { new: true });
   if (!item) throw new HttpError(404, 'Request not found');
   return ok({ item });
 });

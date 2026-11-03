@@ -5,6 +5,7 @@ import { useClientOptions } from '@/hooks/useClientOptions';
 import { useForm } from '@/hooks/useForm';
 import { DURATIONS, MEET_MODES, TECH_INFO, TIMES } from '@/lib/constants';
 import { todayISO } from '@/lib/format';
+import { R, slotError, slotPassed } from '@/lib/validate';
 
 export type TechValues = { type: string; client: string; date: string; time: string; duration: string; mode: string; link: string; context: string };
 
@@ -14,7 +15,7 @@ const tomorrow = () => new Date(Date.now() + 864e5).toISOString().slice(0, 10);
 export function TechForm({ onSubmit }: { onSubmit: (v: TechValues) => Promise<unknown> }) {
   const clients = useClientOptions();
   const initial: TechValues = { type: TECH_INFO[2].k, client: '', date: tomorrow(), time: '11:00', duration: '45 min', mode: MEET_MODES[0], link: '', context: '' };
-  const form = useForm<TechValues>(initial);
+  const form = useForm<TechValues>(initial, { link: R.url, context: R.words(5) });
   const { values: v, set } = form;
   const client = v.client || clients[0] || '';
 
@@ -23,7 +24,9 @@ export function TechForm({ onSubmit }: { onSubmit: (v: TechValues) => Promise<un
       className="stack"
       style={{ gap: 26 }}
       onSubmit={form.submit(async values => {
-        if (!values.date || values.date < todayISO()) throw new Error('Pick a preferred date that is not in the past');
+        const late = slotError(values.date, values.time);
+        if (late) { form.setErrors({ time: late }); throw new Error(late); }
+        if (!client) throw new Error('Add a client first (a lead in your pipeline)');
         await onSubmit({ ...values, client, link: values.mode === 'Mariox office' ? '' : values.link });
         form.reset();
       })}
@@ -46,7 +49,7 @@ export function TechForm({ onSubmit }: { onSubmit: (v: TechValues) => Promise<un
         <div className="grid-f" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(170px,1fr))' }}>
           <Select label="Client" options={clients} value={client} onChange={e => set('client', e.target.value)} />
           <Input label="Preferred date" type="date" min={todayISO()} required {...form.bind('date')} />
-          <Select label="Preferred time (IST)" options={TIMES} value={v.time} onChange={e => set('time', e.target.value)} />
+          <Select label="Preferred time (IST)" options={TIMES.filter(t => !slotPassed(v.date, t))} value={v.time} error={form.errors.time} onChange={e => set('time', e.target.value)} placeholder={TIMES.every(t => slotPassed(v.date, t)) ? 'No times left today' : undefined} />
           <Select label="Duration" options={DURATIONS} value={v.duration} onChange={e => set('duration', e.target.value)} />
         </div>
       </div>

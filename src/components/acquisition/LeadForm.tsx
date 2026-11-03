@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Button, Dropdown, FormError, Icon, Modal } from '@/components/ui';
+import { Button, Dropdown, FormError, Icon, Modal, PhoneInput } from '@/components/ui';
 import { api, ApiError } from '@/lib/client';
 import { HOME, OPEN, add, flag, mkt, rel, t12, today, type AcqLead, type AcqLists, type Temp } from '@/lib/acquisition';
 import { DateQuick, Field, G2, Multi, TempPick } from './bits';
-import { MeetFields, meetDraft, ordered } from './MeetFields';
+import { MeetFields, meetDraft, meetErrors, ordered } from './MeetFields';
+import { COUNTRIES, R, all, notPast } from '@/lib/validate';
 
 type Props = {
   lead?: Partial<AcqLead> | null; // with _id: edit; without: add (may be prefilled)
@@ -35,8 +36,9 @@ export function LeadForm({ lead, lists, defaultOwner, onClose, onSaved }: Props)
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dup, setDup] = useState<string | null>(null);
+  const [errs, setErrs] = useState<Record<string, string | null>>({});
   const name = useRef<HTMLInputElement>(null);
-  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF(p => ({ ...p, [k]: v }));
+  const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => { setF(p => ({ ...p, [k]: v })); setErrs(e => ({ ...e, [k]: null })); };
   useEffect(() => { setTimeout(() => name.current?.focus(), 60); }, []);
   const hasMeet = canMeet && !!meet.date;
 
@@ -44,7 +46,20 @@ export function LeadForm({ lead, lists, defaultOwner, onClose, onSaved }: Props)
   const opts = (list: string[], cur: string) => (cur && !list.includes(cur) ? [...list, cur] : list);
 
   async function save() {
-    if (!f.name.trim()) { setError('Add the name'); return name.current?.focus(); }
+    // Same rules as the API (lib/validate.ts); errors show under each field.
+    const e: Record<string, string | null> = {
+      name: all(R.required('Name'), R.person)(f.name.trim()),
+      company: R.company(f.company.trim()),
+      phone: R.phone(f.phone),
+      email: R.email(f.email.trim()),
+      linkedin: R.url(f.linkedin.trim() && !/^https?:\/\//i.test(f.linkedin.trim()) ? 'https://' + f.linkedin.trim() : f.linkedin.trim()),
+      city: R.city(f.city.trim()),
+      contactedAt: R.date(f.contactedAt) ?? (f.contactedAt > today() ? "Contacted on can't be in the future" : null),
+      next: !edit && !hasMeet ? notPast(next, 'Next step') : null,
+      ...(hasMeet && (!hadMeet || meet.date !== l.meet?.date || meet.time !== l.meet?.time) ? meetErrors(meet) : {}),
+    };
+    setErrs(e);
+    if (Object.values(e).some(Boolean)) { setError('Please fix the highlighted fields'); if (e.name) name.current?.focus(); return; }
     setBusy(true);
     setError(null);
     const m = hasMeet ? ordered({ ...meet, attendees: meet.attendees.length ? meet.attendees : [f.owner].filter(Boolean) }, lists.team) : undefined;
@@ -70,21 +85,21 @@ export function LeadForm({ lead, lists, defaultOwner, onClose, onSaved }: Props)
         <div className="fm">
           <div className="fm-s"><span className="fm-n">1</span><b>Who</b></div>
           <G2>
-            <Field label="Name *"><input ref={name} className="inp" autoComplete="off" placeholder="Full name" value={f.name} onChange={e => { set('name', e.target.value); setForce(false); setDup(null); }} /></Field>
-            <Field label="Company"><input className="inp" placeholder="Company or agency" value={f.company} onChange={e => { set('company', e.target.value); setForce(false); setDup(null); }} /></Field>
-            <Field label="WhatsApp / phone"><input className="inp" inputMode="tel" placeholder="+971 50 123 4567" value={f.phone} onChange={e => set('phone', e.target.value)} /></Field>
-            <Field label="Email"><input className="inp" type="email" inputMode="email" placeholder="name@company.com" value={f.email} onChange={e => set('email', e.target.value)} /></Field>
-            <Field label="LinkedIn / profile URL" span><input className="inp" inputMode="url" placeholder="linkedin.com/in/…" value={f.linkedin} onChange={e => set('linkedin', e.target.value)} /></Field>
+            <Field label="Name *" error={errs.name}><input ref={name} className="inp" autoComplete="off" placeholder="Full name" value={f.name} onChange={e => { set('name', e.target.value); setForce(false); setDup(null); }} /></Field>
+            <Field label="Company" error={errs.company}><input className="inp" placeholder="Company or agency" value={f.company} onChange={e => { set('company', e.target.value); setForce(false); setDup(null); }} /></Field>
+            <PhoneInput label="WhatsApp / phone" country={COUNTRIES.find(c => c.name === f.country)?.iso} value={f.phone} error={errs.phone} onChange={e => set('phone', e.target.value)} />
+            <Field label="Email" error={errs.email}><input className="inp" type="email" inputMode="email" placeholder="name@company.com" value={f.email} onChange={e => set('email', e.target.value)} /></Field>
+            <Field label="LinkedIn / profile URL" span error={errs.linkedin}><input className="inp" inputMode="url" placeholder="linkedin.com/in/…" value={f.linkedin} onChange={e => set('linkedin', e.target.value)} /></Field>
           </G2>
 
           <div className="fm-s"><span className="fm-n">2</span><b>Where from</b></div>
           <G2>
             <div className="field"><span>Found on</span><Dropdown options={opts(lists.sources, f.source)} value={f.source} onChange={v => set('source', v)} aria-label="Found on" /></div>
             <div className="field"><span>Talking on</span><Dropdown options={opts(lists.channels, f.channel)} value={f.channel} onChange={v => set('channel', v)} aria-label="Talking on" /></div>
-            <Field label="Contacted on"><input className="inp" type="date" value={f.contactedAt} onChange={e => set('contactedAt', e.target.value)} /></Field>
+            <Field label="Contacted on" error={errs.contactedAt}><input className="inp" type="date" max={today()} min="2000-01-01" value={f.contactedAt} onChange={e => set('contactedAt', e.target.value)} /></Field>
             <div className="field"><span>Added by</span><Dropdown options={opts(lists.team, f.owner)} value={f.owner} onChange={v => set('owner', v)} aria-label="Added by" /></div>
             <div className="field"><span>Country</span><Dropdown options={opts(lists.countries, f.country)} value={f.country} onChange={v => set('country', v)} aria-label="Country" /></div>
-            <Field label="City"><input className="inp" placeholder="e.g. Dubai" value={f.city} onChange={e => set('city', e.target.value)} /></Field>
+            <Field label="City" error={errs.city}><input className="inp" placeholder="e.g. Dubai" value={f.city} onChange={e => set('city', e.target.value)} /></Field>
           </G2>
           <div className="mk">{mkt(f) === 'domestic' ? `${flag(HOME)} Domestic client` : `${flag(f.country)} International client`}</div>
           <div><span className="lbl">Services they provide</span><Multi options={lists.services} value={f.services} onChange={v => set('services', v)} /></div>
@@ -93,12 +108,13 @@ export function LeadForm({ lead, lists, defaultOwner, onClose, onSaved }: Props)
           {canMeet && (
             <>
               <div className="fm-s"><span className="fm-n">3</span><b>Meeting</b><span className="fm-o">{hadMeet ? 'Change it here' : 'Optional · add a date to book it'}</span></div>
-              <div className={`mbox ${hasMeet ? 'has' : ''}`}><MeetFields value={meet} onChange={setMeet} team={lists.team} /></div>
+              <div className={`mbox ${hasMeet ? 'has' : ''}`}><MeetFields value={meet} onChange={m => { setMeet(m); setErrs(e => ({ ...e, date: null, time: null, link: null })); }} team={lists.team} errors={errs} /></div>
               <div className={`route ${hasMeet ? 'has' : ''}`}>
                 <div className="r-lead">
                   <Icon name="send" size="s" />
                   <span>No meeting yet, so it goes to <b>Lead</b>.{edit ? '' : ' Next step:'}</span>
-                  {!edit && <DateQuick value={next} onChange={setNext} />}
+                  {!edit && <DateQuick value={next} onChange={v => { setNext(v); setErrs(e => ({ ...e, next: null })); }} />}
+                  {errs.next && <small className="field-err">{errs.next}</small>}
                 </div>
                 <div className="r-meet">
                   <Icon name="cal" size="s" />
