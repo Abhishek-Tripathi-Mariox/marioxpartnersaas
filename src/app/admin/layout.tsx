@@ -1,3 +1,4 @@
+import '../acquire.css';
 import { AppShell } from '@/components/AppShell';
 import { ADMIN_NAV, ADMIN_TABS } from '@/components/nav';
 

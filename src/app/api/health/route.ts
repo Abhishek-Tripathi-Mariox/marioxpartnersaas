@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import { NextResponse } from 'next/server';
 import { connectDB } from '@/lib/db';
 import { storageStatus } from '@/lib/files';
+import { mailStatus } from '@/lib/mail';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,9 @@ export async function GET() {
   try {
     await connectDB();
     await mongoose.connection.db!.admin().ping();
-    const storage = await storageStatus();
-    return NextResponse.json({ ok: storage.storage === 'up', db: 'up', dbMs: Date.now() - started, ...storage, ...checks }, { status: storage.storage === 'up' ? 200 : 503 });
+    const [storage, mail] = await Promise.all([storageStatus(), mailStatus()]);
+    // Email being down doesn't take the app down: it is reported, not counted in ok.
+    return NextResponse.json({ ok: storage.storage === 'up', db: 'up', dbMs: Date.now() - started, ...storage, ...mail, ...checks }, { status: storage.storage === 'up' ? 200 : 503 });
   } catch (e) {
     return NextResponse.json({ ok: false, db: 'down', error: (e as Error).message, ...checks }, { status: 503 });
   }

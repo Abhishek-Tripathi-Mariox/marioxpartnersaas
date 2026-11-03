@@ -1,5 +1,5 @@
 export { Button, ButtonLink } from './Button';
-export { Input, Select, Textarea, Check, Toggle, FormError } from './Field';
+export { Input, PasswordInput, Select, Textarea, Check, Toggle, FormError } from './Field';
 export { Card, MoreLink, StatCard, Stats, InfoTip, Note, PageHeader, EmptyState, Progress, Steps } from './Card';
 export { Badge, StatusBadge, statusTone, type Tone } from './Badge';
 export { DataTable, type Column } from './DataTable';

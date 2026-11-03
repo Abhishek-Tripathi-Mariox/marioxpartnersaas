@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { ZodError, type ZodSchema } from 'zod';
+import { ZodError, type ZodTypeAny, type infer as Infer } from 'zod';
 import { connectDB } from './db';
 import { COOKIE, verifySession, type Session } from './jwt';
 import { User } from '@/models/User';
@@ -33,7 +33,7 @@ export async function admin(): Promise<Session> {
   return s;
 }
 
-export async function body<T>(req: Request, schema: ZodSchema<T>): Promise<T> {
+export async function body<S extends ZodTypeAny>(req: Request, schema: S): Promise<Infer<S>> {
   let raw: unknown;
   try {
     raw = await req.json();

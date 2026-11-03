@@ -5,7 +5,7 @@ import { User } from '@/models/User';
 import { Lead } from '@/models/Lead';
 import { Project } from '@/models/Project';
 import { Booking, Scope, TechRequest, Ticket } from '@/models/Requests';
-import { hashPassword, hashToken, publicUser } from '@/lib/users';
+import { emailInvite, emailWelcome, hashPassword, hashToken, publicUser } from '@/lib/users';
 
 async function findUser(id: string) {
   const user = await User.findById(id);
@@ -33,12 +33,13 @@ const adminPatch = z.object({
   commissionRate: z.number().min(0).max(1).optional(),
   password: z.string().min(8).optional(),   // admin sets a new password
   newInvite: z.boolean().optional(),        // admin generates a fresh set-password link
+  emailPassword: z.boolean().optional(),    // with password: email the partner their new login details
 });
 
 export const PATCH = handle(async (req, { id }) => {
   const me = await admin();
   const user = await findUser(id);
-  const { password, newInvite, ...fields } = await body(req, adminPatch);
+  const { password, newInvite, emailPassword, ...fields } = await body(req, adminPatch);
   if (id === me.sub && fields.status === 'disabled') throw new HttpError(400, "You can't suspend your own account");
   if (fields.email) fields.email = fields.email.toLowerCase();
 
@@ -58,7 +59,10 @@ export const PATCH = handle(async (req, { id }) => {
   }
 
   await user.save();
-  return ok({ user: publicUser(user), setPasswordUrl });
+  // A fresh link is emailed straight away (it replaces the old one).
+  const mail = setPasswordUrl ? await emailInvite(user, setPasswordUrl, true)
+    : password && emailPassword ? await emailWelcome(user, password, true) : null;
+  return ok({ user: publicUser(user), setPasswordUrl, mail });
 });
 
 // Deletes a partner and their leads and requests. Refused while they have projects,

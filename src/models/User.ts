@@ -24,6 +24,13 @@ const UserSchema = new Schema(
     externalId: { type: String, index: true, sparse: true },
     inviteToken: { type: String, index: true, select: false },
     inviteExpires: { type: Date, select: false },
+    // Forgot password: a hashed 6-digit code sent by email, then a short-lived token to set the new password.
+    resetOtpHash: { type: String, select: false },
+    resetOtpExpires: { type: Date, select: false },
+    resetOtpSentAt: { type: Date, select: false },
+    resetOtpAttempts: { type: Number, select: false },
+    resetTokenHash: { type: String, select: false },
+    resetTokenExpires: { type: Date, select: false },
     lastLoginAt: Date,
     // Bumped on password change / admin reset; sessions signed with an older value stop working.
     sessionVersion: { type: Number, default: 0 },

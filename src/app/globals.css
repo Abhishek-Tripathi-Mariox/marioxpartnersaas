@@ -191,3 +191,16 @@ video.file-thumb { width: 36px; height: 36px; }
 .lead-drag:active { cursor: grabbing; }
 .lead-drag.ph { opacity: .3; }
 .lead-drag .lead { cursor: inherit; -webkit-user-drag: none; }
+
+/* password field with show / hide */
+.pw-wrap { position: relative; display: block; }
+.pw-wrap .inp { width: 100%; padding-right: 46px; }
+.pw-eye { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: var(--muted); }
+.pw-eye:hover { color: var(--ink); background: var(--panel-3); }
+.pw-eye .i { width: 17px; height: 17px; }
+/* one-time code */
+.otp { display: flex; gap: 10px; }
+.otp input { width: 100%; min-width: 0; height: 56px; text-align: center; font: 700 22px var(--mono); padding: 0; }
+.fp-link { color: var(--accent); font-weight: 600; font-size: 13.5px; }
+.fp-link:hover { text-decoration: underline; }
+.fp-head { display: flex; flex-direction: column; }

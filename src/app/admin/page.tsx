@@ -10,6 +10,7 @@ import { usePipeline } from '@/components/SettingsProvider';
 import { DEFAULT_COMMISSION_RATE } from '@/lib/constants';
 import { short } from '@/lib/format';
 import { earnings, pipeline } from '@/lib/metrics';
+import { ST, STATUSES, overdue, today, type AcqLead } from '@/lib/acquisition';
 import type { Lead, OwnerRef, Project, RequestItem, User } from '@/types';
 
 const KINDS = [
@@ -25,6 +26,7 @@ export default function AdminOverview() {
   const users = useApi<{ users: User[] }>('/api/admin/users');
   const leads = useApi<{ leads: Lead[] }>('/api/leads');
   const projects = useApi<{ projects: Project[] }>('/api/projects');
+  const acq = useApi<{ leads: AcqLead[] }>('/api/admin/acquisition');
   const reqs = {
     scope: useApi<{ items: RequestItem[] }>('/api/requests/scope'),
     booking: useApi<{ items: RequestItem[] }>('/api/requests/booking'),
@@ -69,7 +71,13 @@ export default function AdminOverview() {
             href={`/admin/requests?kind=${k.kind}&status=${k.open.join(',')}`}
             info={`${k.label} whose status is ${k.open.join(' or ')}: still need a decision or reply from Mariox.`} />
         ))}
+        {acq.data && (
+          <StatCard icon="target" tone="bad" label="Leads overdue" value={acq.data.leads.filter(overdue).length}
+            hint="Partner acquisition" href="/admin/acquisition"
+            info="Acquisition leads whose meeting or follow-up date has passed: the team needs to update them." />
+        )}
       </Stats>
+      {acq.data && <AcquisitionCard leads={acq.data.leads} />}
       <div className="eyebrow" style={{ marginTop: 4 }}>Partner commissions</div>
       <EarningsStats e={money} releasedHint="Paid to partners" rateLabel="each partner's rate" hrefFor={() => '/admin/projects'} />
 
@@ -92,5 +100,22 @@ export default function AdminOverview() {
         />
       </Card>
     </>
+  );
+}
+
+// Partner acquisition at a glance: how many people sit in each status, overdue and meetings today.
+function AcquisitionCard({ leads }: { leads: AcqLead[] }) {
+  const od = leads.filter(overdue).length;
+  const meetings = leads.filter(l => l.status === 'meeting' && l.meet?.date === today()).length;
+  return (
+    <Card title="Partner acquisition" subtitle={`${od} overdue · ${meetings} meeting${meetings === 1 ? '' : 's'} today`} action={<MoreLink href="/admin/acquisition">Open</MoreLink>}>
+      <div className="acq">
+        <div className="ofun">
+          {STATUSES.map(k => (
+            <Link key={k} href="/admin/acquisition" className="ofun-s"><span className="lbl">{ST[k][0]}</span><b className="num">{leads.filter(l => l.status === k).length}</b></Link>
+          ))}
+        </div>
+      </div>
+    </Card>
   );
 }

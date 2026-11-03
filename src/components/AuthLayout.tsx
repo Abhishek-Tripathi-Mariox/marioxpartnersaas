@@ -8,7 +8,8 @@ const POINTS: [IconName, string, string][] = [
 ];
 
 // Split screen used by login and set-password: dark brand panel + form.
-export function AuthLayout({ eyebrow, title, subtitle, children }: { eyebrow: string; title: ReactNode; subtitle: string; children: ReactNode }) {
+// `bare`: the page renders its own heading (e.g. a multi-step flow).
+export function AuthLayout({ eyebrow, title, subtitle, children, bare }: { eyebrow: string; title: ReactNode; subtitle: string; children: ReactNode; bare?: boolean }) {
   return (
     <div className="auth">
       <div className="ob-l">
@@ -30,11 +31,13 @@ export function AuthLayout({ eyebrow, title, subtitle, children }: { eyebrow: st
         <span className="lbl">Mariox Software · Partner network</span>
       </div>
       <div className="auth-form">
-        <div>
-          <div className="eyebrow">{eyebrow}</div>
-          <h2 className="h-lg">{title}</h2>
-          <p className="lede">{subtitle}</p>
-        </div>
+        {!bare && (
+          <div>
+            <div className="eyebrow">{eyebrow}</div>
+            <h2 className="h-lg">{title}</h2>
+            <p className="lede">{subtitle}</p>
+          </div>
+        )}
         {children}
       </div>
     </div>

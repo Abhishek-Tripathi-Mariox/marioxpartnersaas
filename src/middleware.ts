@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { COOKIE, verifySession } from '@/lib/jwt';
 
-const PUBLIC = ['/login', '/set-password'];
+const PUBLIC = ['/login', '/set-password', '/forgot-password'];
 
 // Page-level guard. API routes check the session themselves (see lib/api.ts).
 export async function middleware(req: NextRequest) {

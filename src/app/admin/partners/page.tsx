@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { DynamicForm, type FieldDef } from '@/components/forms/DynamicForm';
-import { Avatar, Button, Card, Chips, DataTable, Input, Modal, PageHeader, Pagination, SearchInput, Select, StatusBadge, useToast } from '@/components/ui';
+import { Avatar, Button, Card, Chips, DataTable, Modal, PageHeader, Pagination, SearchInput, Select, StatusBadge, useToast } from '@/components/ui';
 import { useList } from '@/hooks/useList';
 import { api } from '@/lib/client';
 import { date } from '@/lib/format';
@@ -15,7 +15,7 @@ const NEW_FIELDS: FieldDef[] = [
   { name: 'phone', label: 'Phone', type: 'tel' },
   { name: 'company', label: 'Company' },
   { name: 'city', label: 'City' },
-  { name: 'password', label: 'Password', hint: 'Leave empty to send an invite link instead' },
+  { name: 'password', label: 'Password', required: true, placeholder: 'At least 8 characters', hint: 'Emailed to the partner with the portal link' },
 ];
 
 const STATUS_TABS = [
@@ -35,13 +35,13 @@ export default function PartnersPage() {
   const router = useRouter();
   const list = useList<User>('/api/admin/users', 'users', { sort: '-createdAt' });
   const [adding, setAdding] = useState(false);
-  const [invite, setInvite] = useState<string | null>(null);
+  type Mail = { sent: boolean; to: string; error?: string };
+  const [created, setCreated] = useState<{ email: string; password: string; mail: Mail } | null>(null);
 
   async function create(v: Record<string, unknown>) {
-    const res = await api.post<{ setPasswordUrl: string | null }>('/api/admin/users', { ...v, password: v.password || undefined });
+    const res = await api.post<{ mail: Mail }>('/api/admin/users', v);
     setAdding(false);
-    setInvite(res.setPasswordUrl);
-    if (!res.setPasswordUrl) toast('Partner created');
+    setCreated({ email: String(v.email), password: String(v.password), mail: res.mail });
     list.reload();
   }
 
@@ -122,16 +122,27 @@ export default function PartnersPage() {
         <DynamicForm fields={NEW_FIELDS} submitLabel="Create partner" onSubmit={create} onCancel={() => setAdding(false)} />
       </Modal>
 
-      <Modal open={!!invite} title="Partner created" onClose={() => setInvite(null)}>
-        <div className="stack">
-          <p className="sub" style={{ fontSize: 14 }}>Send this one-time link to the partner so they can set a password. It expires in 7 days.</p>
-          <Input readOnly className="mono" value={invite || ''} onFocus={e => e.target.select()} />
-          <div className="form-foot">
-            <Button icon="copy" onClick={() => { navigator.clipboard.writeText(invite || ''); toast('Link copied'); }}>Copy link</Button>
-            <Button variant="ink" onClick={() => setInvite(null)}>Done</Button>
+      {created && (
+        <Modal open title="Partner created" onClose={() => setCreated(null)}>
+          <div className="stack">
+            {created.mail.sent ? (
+              <div className="note good"><span>Login details emailed to <b>{created.mail.to}</b>: the portal link, their email and password.</span></div>
+            ) : (
+              <div className="form-error">The email could not be sent ({created.mail.error}). Share these login details with the partner yourself.</div>
+            )}
+            <div className="note">
+              <span className="lbl">Login details</span>
+              <span className="mono" style={{ fontSize: 13, lineHeight: 1.8 }}>{loginUrl()}<br />{created.email}<br />{created.password}</span>
+            </div>
+            <div className="form-foot">
+              <Button icon="copy" onClick={() => { navigator.clipboard.writeText(`Portal: ${loginUrl()}\nEmail: ${created.email}\nPassword: ${created.password}`); toast('Login details copied'); }}>Copy details</Button>
+              <Button variant="ink" onClick={() => setCreated(null)}>Done</Button>
+            </div>
           </div>
-        </div>
-      </Modal>
+        </Modal>
+      )}
     </>
   );
 }
+
+const loginUrl = () => `${window.location.origin}/login`;

@@ -38,6 +38,8 @@ export const Setting =
           priorities: [{ _id: false, name: String, tone: String }],
           lostReasons: [String],
         },
+        // Partner acquisition lists (team, sources, channels, reasons, services, countries).
+        acquisition: { _id: false, team: [String], sources: [String], channels: [String], reasons: [String], services: [String], countries: [String], emails: { type: Map, of: String } },
       },
       { timestamps: true },
     ),

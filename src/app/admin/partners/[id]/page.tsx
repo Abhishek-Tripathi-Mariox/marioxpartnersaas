@@ -7,7 +7,7 @@ import { DynamicForm, type FieldDef } from '@/components/forms/DynamicForm';
 import { PipelineView } from '@/components/leads/PipelineView';
 import { ProjectList } from '@/components/projects/ProjectList';
 import { AttachmentList, type Attachment } from '@/components/forms/FileUploader';
-import { Button, EmptyState, Icon, Input, Modal, StatCard, Stats, StatusBadge, Tabs, hue, initials, useToast, SkeletonCards } from '@/components/ui';
+import { Button, Check, EmptyState, Icon, Input, Modal, StatCard, Stats, StatusBadge, Tabs, hue, initials, useToast, SkeletonCards } from '@/components/ui';
 import { useApi } from '@/hooks/useApi';
 import { api } from '@/lib/client';
 import { date, inr, short } from '@/lib/format';
@@ -49,7 +49,7 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
   const [editing, setEditing] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [password, setPassword] = useState('');
-  const [invite, setInvite] = useState<string | null>(null);
+  const [emailPw, setEmailPw] = useState(true);
 
   const u = data?.user;
   if (!u) return <SkeletonCards count={2} height={200} />;
@@ -61,10 +61,10 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
 
   async function patch(body: Record<string, unknown>, msg: string) {
     try {
-      const res = await api.patch<{ user: User; setPasswordUrl: string | null }>(`/api/admin/users/${id}`, body);
+      const res = await api.patch<{ user: User; mail: { sent: boolean; to: string; error?: string } | null }>(`/api/admin/users/${id}`, body);
       setData({ user: res.user });
-      if (res.setPasswordUrl) setInvite(res.setPasswordUrl);
-      toast(msg);
+      if (res.mail && !res.mail.sent) toast(`${msg}, but the email failed: ${res.mail.error}`, true);
+      else toast(res.mail ? `${msg} · emailed to ${res.mail.to}` : msg);
       return res;
     } catch (e) {
       toast((e as Error).message, true);
@@ -91,7 +91,6 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
         <span className="spacer" />
         <Button size="sm" icon="note" onClick={() => setEditing(true)}>Edit details</Button>
         <Button size="sm" icon="shield" onClick={() => setPwOpen(true)}>Set password</Button>
-        <Button size="sm" icon="send" onClick={() => patch({ newInvite: true }, 'New invite link created')}>Invite link</Button>
         {suspended ? (
           <Button size="sm" variant="good" icon="check" onClick={() => patch({ status: 'active' }, 'Partner reactivated')}>Reactivate</Button>
         ) : (
@@ -192,13 +191,14 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
           className="stack"
           onSubmit={async e => {
             e.preventDefault();
-            if ((await patch({ password }, 'Password updated')) !== undefined) {
+            if ((await patch({ password, emailPassword: emailPw }, 'Password updated')) !== undefined) {
               setPwOpen(false);
               setPassword('');
             }
           }}
         >
-          <Input label="New password" type="text" minLength={8} required hint="At least 8 characters. Share it with the partner securely." value={password} onChange={e => setPassword(e.target.value)} />
+          <Input label="New password" type="text" minLength={8} required hint="At least 8 characters. Signs the partner out of every device." value={password} onChange={e => setPassword(e.target.value)} />
+          <Check checked={emailPw} onChange={setEmailPw}>Email the portal link, email and new password to {u.email}</Check>
           <div className="form-foot">
             <Button type="button" variant="ghost" onClick={() => setPwOpen(false)}>Cancel</Button>
             <Button variant="fire">Save password</Button>
@@ -206,16 +206,6 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
         </form>
       </Modal>
 
-      <Modal open={!!invite} title="New invite link" onClose={() => { setInvite(null); reload(); }}>
-        <div className="stack">
-          <p className="sub" style={{ fontSize: 14 }}>Send this one-time link to the partner. It expires in 7 days and replaces any older link.</p>
-          <Input readOnly className="mono" value={invite || ''} onFocus={e => e.target.select()} />
-          <div className="form-foot">
-            <Button icon="copy" onClick={() => { navigator.clipboard.writeText(invite || ''); toast('Link copied'); }}>Copy link</Button>
-            <Button variant="ink" onClick={() => setInvite(null)}>Done</Button>
-          </div>
-        </div>
-      </Modal>
     </>
   );
 }

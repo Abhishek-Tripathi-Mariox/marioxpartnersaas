@@ -1,4 +1,7 @@
-import type { InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
+'use client';
+
+import { useState, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react';
+import { Icon } from './Icon';
 import { Dropdown, type Option } from './Dropdown';
 
 type Wrap = { label?: string; hint?: string; small?: boolean };
@@ -23,6 +26,21 @@ export function Input({ label, hint, small, className = '', ...rest }: Wrap & In
   return (
     <Field label={label} hint={hint}>
       <input className={inp(small, className)} {...rest} />
+    </Field>
+  );
+}
+
+// Password with a show / hide button inside the field.
+export function PasswordInput({ label, hint, small, className = '', ...rest }: Wrap & Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
+  const [show, setShow] = useState(false);
+  return (
+    <Field label={label} hint={hint}>
+      <span className="pw-wrap">
+        <input className={inp(small, className)} type={show ? 'text' : 'password'} {...rest} />
+        <button type="button" className="pw-eye" onClick={e => { e.preventDefault(); setShow(s => !s); }} aria-label={show ? 'Hide password' : 'Show password'} title={show ? 'Hide password' : 'Show password'}>
+          <Icon name={show ? 'eyeOff' : 'eye'} size="s" />
+        </button>
+      </span>
     </Field>
   );
 }

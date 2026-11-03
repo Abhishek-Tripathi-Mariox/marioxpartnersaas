@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { User } from '@/models/User';
 import { HttpError } from './api';
 import { nextCode } from './codes';
+import { partnerInvite, partnerWelcome } from './emails';
+import { sendMail } from './mail';
 
 export const newPartnerSchema = z.object({
   name: z.string().min(1),
@@ -53,4 +55,15 @@ export function publicUser(u: Record<string, unknown> & { _id: unknown; toObject
   const { passwordHash, inviteToken, inviteExpires, __v, ...rest } = o as Record<string, unknown>;
   void passwordHash; void inviteToken; void inviteExpires; void __v;
   return { ...rest, id: String(o._id) };
+}
+
+// Emails the set-password link. Returns whether it went out; never throws.
+export function emailInvite(user: { name: string; email: string; partnerCode?: string }, url: string, again = false) {
+  return sendMail({ to: user.email, ...partnerInvite({ name: user.name, email: user.email, partnerCode: user.partnerCode, url, again }) });
+}
+
+// Emails the portal link with the email and password the admin set. Returns whether it went out; never throws.
+export function emailWelcome(user: { name: string; email: string; partnerCode?: string }, password: string, reset = false) {
+  const loginUrl = `${(process.env.APP_URL || 'http://localhost:3000').trim().replace(/\/$/, '')}/login`;
+  return sendMail({ to: user.email, ...partnerWelcome({ name: user.name, email: user.email, partnerCode: user.partnerCode, password, loginUrl, reset }) });
 }

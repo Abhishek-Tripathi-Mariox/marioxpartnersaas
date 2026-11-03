@@ -24,7 +24,8 @@ export const TOOLKIT_TABS = [
 ];
 
 export const ADMIN_NAV: NavItem[] = [
-  { href: '/admin', label: 'Overview', icon: 'grid', exact: true, prefetch: ['/api/admin/users', '/api/leads', '/api/projects', '/api/requests/scope', '/api/requests/booking', '/api/requests/tech', '/api/requests/ticket'] },
+  { href: '/admin', label: 'Overview', icon: 'grid', exact: true, prefetch: ['/api/admin/users', '/api/admin/acquisition', '/api/leads', '/api/projects', '/api/requests/scope', '/api/requests/booking', '/api/requests/tech', '/api/requests/ticket'] },
+  { href: '/admin/acquisition', label: 'Acquisition', icon: 'target', prefetch: ['/api/admin/acquisition'] },
   { href: '/admin/partners', label: 'Partners', icon: 'users', prefetch: ['/api/admin/users?page=1&limit=25&sort=-createdAt'] },
   { href: '/admin/leads', label: 'Leads', icon: 'pipe', prefetch: ['/api/leads', '/api/admin/users?role=partner'] },
   { href: '/admin/projects', label: 'Projects', icon: 'layers', prefetch: ['/api/projects?page=1&limit=10&sort=-closedAt', '/api/admin/users?role=partner'] },

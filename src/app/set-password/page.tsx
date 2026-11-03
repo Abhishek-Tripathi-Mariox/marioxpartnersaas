@@ -3,7 +3,7 @@
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { AuthLayout } from '@/components/AuthLayout';
-import { Button, FormError, Input } from '@/components/ui';
+import { Button, FormError, Input, PasswordInput } from '@/components/ui';
 import { useForm } from '@/hooks/useForm';
 import { api } from '@/lib/client';
 
@@ -22,8 +22,8 @@ function SetPasswordForm() {
 
   return (
     <form className="stack" style={{ gap: 16 }} onSubmit={onSubmit}>
-      <Input label="New password" type="password" minLength={8} required autoComplete="new-password" hint="At least 8 characters" {...form.bind('password')} />
-      <Input label="Confirm password" type="password" minLength={8} required autoComplete="new-password" {...form.bind('confirm')} />
+      <PasswordInput label="New password" minLength={8} required autoComplete="new-password" hint="At least 8 characters" {...form.bind('password')} />
+      <PasswordInput label="Confirm password" minLength={8} required autoComplete="new-password" {...form.bind('confirm')} />
       <FormError error={form.error} />
       <Button variant="fire" block loading={form.busy}>Save and continue</Button>
     </form>
