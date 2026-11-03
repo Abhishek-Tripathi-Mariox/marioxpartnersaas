@@ -37,3 +37,6 @@ export const REQUEST_STATUS = {
 export const TDS_RATE = 0.02;
 // Same as RATE in the original portal; can be changed per partner from admin.
 export const DEFAULT_COMMISSION_RATE = 0.5;
+
+// Partner IDs: MX-P-243-1, MX-P-243-2, … (the last number counts up from 1, without leading zeros).
+export const PARTNER_CODE_PREFIX = 'MX-P-243';

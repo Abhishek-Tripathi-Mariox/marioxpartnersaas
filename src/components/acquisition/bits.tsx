@@ -175,7 +175,7 @@ export function Option({ name, value, picked, onPick, icon, iconClass, title, ch
   );
 }
 
-// Converted / onboarding partner: code and account state, e.g. "MXP-0144 · account invited".
+// Converted / onboarding partner: code and account state, e.g. "MX-P-243-7 · account invited".
 export function partnerLine(l: AcqLead) {
   const p = typeof l.partner === 'object' && l.partner ? l.partner : null;
   return p ? `${p.partnerCode ?? 'Partner'} · account ${p.status ?? 'created'}` : 'Continues in Partners';

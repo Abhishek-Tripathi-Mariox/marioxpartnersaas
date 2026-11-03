@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { DeletePartnerDialog } from '@/components/admin/DeletePartnerDialog';
 import { DynamicForm, type FieldDef } from '@/components/forms/DynamicForm';
 import { Avatar, Button, Card, Chips, DataTable, Modal, PageHeader, Pagination, SearchInput, Select, StatusBadge, useToast } from '@/components/ui';
 import { useList } from '@/hooks/useList';
@@ -36,6 +37,7 @@ export default function PartnersPage() {
   const router = useRouter();
   const list = useList<User>('/api/admin/users', 'users', { sort: '-createdAt' });
   const [adding, setAdding] = useState(false);
+  const [deleting, setDeleting] = useState<User | null>(null);
   type Mail = { sent: boolean; to: string; error?: string };
   const [created, setCreated] = useState<{ email: string; password: string; mail: Mail } | null>(null);
 
@@ -103,21 +105,30 @@ export default function PartnersPage() {
             { key: 'login', header: 'Last login', width: '110px', sort: 'lastLoginAt', render: u => <span className="sub">{u.lastLoginAt ? date(u.lastLoginAt) : 'Never'}</span> },
             { key: 'status', header: 'Status', width: '100px', render: u => <StatusBadge status={u.status} /> },
             {
-              key: 'act', header: '', width: '110px', align: 'right',
+              key: 'act', header: '', width: '160px', align: 'right',
               render: u =>
                 u.role === 'partner' && (
-                  <span onClick={e => e.stopPropagation()}>
+                  <span className="row" style={{ gap: 6, justifyContent: 'flex-end' }} onClick={e => e.stopPropagation()}>
                     {u.status === 'disabled' ? (
                       <Button size="xs" variant="good" onClick={() => setStatus(u, 'active')}>Reactivate</Button>
                     ) : (
                       <Button size="xs" variant="danger" onClick={() => confirm(`Suspend ${u.name}?`) && setStatus(u, 'disabled')}>Suspend</Button>
                     )}
+                    <Button size="xs" variant="danger" icon="trash" aria-label={`Delete ${u.name}`} title="Delete partner" onClick={() => setDeleting(u)} />
                   </span>
                 ),
             },
           ]}
         />
       </Card>
+
+      {deleting && (
+        <DeletePartnerDialog
+          partner={deleting}
+          onClose={() => setDeleting(null)}
+          onDeleted={() => { toast(`${deleting.name} deleted`); setDeleting(null); list.reload(); }}
+        />
+      )}
 
       <Modal open={adding} title="Add partner" onClose={() => setAdding(false)}>
         <DynamicForm fields={NEW_FIELDS} submitLabel="Create partner" onSubmit={create} onCancel={() => setAdding(false)} />

@@ -5,6 +5,8 @@ import { User } from '@/models/User';
 import { Lead } from '@/models/Lead';
 import { Project } from '@/models/Project';
 import { Booking, Scope, TechRequest, Ticket } from '@/models/Requests';
+import { FileRecord } from '@/models/File';
+import { deleteFile } from '@/lib/files';
 import { emailInvite, emailWelcome, hashPassword, hashToken, profileFields, publicUser } from '@/lib/users';
 
 async function findUser(id: string) {
@@ -67,6 +69,9 @@ export const DELETE = handle(async (_req, { id }) => {
   if (projects) throw new HttpError(409, `This partner has ${projects} project(s) with payment records. Suspend them instead, or delete the projects first.`);
 
   await Promise.all([Lead, Scope, Booking, TechRequest, Ticket].map(m => m.deleteMany({ owner: id })));
+  // Files they uploaded (scope attachments) are removed from S3 too; shared sales kit files belong to admins.
+  const files = await FileRecord.find({ owner: id }).select('_id').lean<{ _id: unknown }[]>();
+  for (const f of files) await deleteFile(String(f._id)).catch(() => {});
   await user.deleteOne();
   return ok({ ok: true });
 });

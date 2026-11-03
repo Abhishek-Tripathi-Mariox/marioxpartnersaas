@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { use, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { DeletePartnerDialog } from '@/components/admin/DeletePartnerDialog';
 import { DynamicForm, type FieldDef } from '@/components/forms/DynamicForm';
 import { PipelineView } from '@/components/leads/PipelineView';
 import { ProjectList } from '@/components/projects/ProjectList';
@@ -51,6 +52,7 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
   const [pwOpen, setPwOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [emailPw, setEmailPw] = useState(true);
+  const [deleting, setDeleting] = useState(false);
 
   const u = data?.user;
   if (!u) return <SkeletonCards count={2} height={200} />;
@@ -72,16 +74,6 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
     }
   }
 
-  async function remove() {
-    if (prompt(`Type DELETE to remove ${u!.name} and all their leads and requests.`) !== 'DELETE') return;
-    try {
-      await api.del(`/api/admin/users/${id}`);
-      toast('Partner deleted');
-      router.push('/admin/partners');
-    } catch (e) {
-      toast((e as Error).message, true);
-    }
-  }
 
   const suspended = u.status === 'disabled';
 
@@ -97,7 +89,7 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
         ) : (
           <Button size="sm" variant="danger" icon="alert" onClick={() => confirm(`Suspend ${u.name}? They are signed out at once and can't log in.`) && patch({ status: 'disabled' }, 'Partner suspended')}>Suspend</Button>
         )}
-        <Button size="sm" variant="danger" icon="trash" onClick={remove}>Delete</Button>
+        <Button size="sm" variant="danger" icon="trash" onClick={() => setDeleting(true)}>Delete</Button>
       </div>
 
       <div className="ccard" style={{ ['--glow' as string]: `hsla(${hue(u.name)},70%,55%,.55)`, padding: 26 }}>
@@ -207,6 +199,7 @@ export default function PartnerDetailPage({ params }: { params: Promise<{ id: st
         </form>
       </Modal>
 
+      {deleting && <DeletePartnerDialog partner={{ id, name: u.name, email: u.email }} onClose={() => setDeleting(false)} onDeleted={() => { toast('Partner deleted'); router.push('/admin/partners'); }} />}
     </>
   );
 }

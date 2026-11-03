@@ -33,7 +33,7 @@ async function seedDemo() {
   }
 
   const p = await User.create({
-    name: 'Rohit Sharma', email: DEMO_EMAIL, role: 'partner', status: 'active', partnerCode: 'MXP-0142', source: 'seed',
+    name: 'Rohit Sharma', email: DEMO_EMAIL, role: 'partner', status: 'active', partnerCode: 'MX-P-243-1', source: 'seed',
     company: 'Sharma Digital Consulting', phone: '+91 98110 42217', city: 'New Delhi', industries: 'Logistics, Healthcare, Retail',
     pan: 'ABCPS1234K', bankAccount: '50100228411190', ifsc: 'HDFC0001234', passwordHash: await hashPassword(DEMO_PASSWORD),
   });

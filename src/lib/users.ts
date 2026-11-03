@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { User } from '@/models/User';
 import { HttpError } from './api';
 import { nextCode } from './codes';
+import { PARTNER_CODE_PREFIX } from './constants';
 import { R, zPhone, zs, zUpper } from './validate';
 import { partnerInvite, partnerWelcome } from './emails';
 import { sendMail } from './mail';
@@ -33,23 +34,37 @@ export async function createPartner(input: NewPartner, source: string) {
 
   const { password, ...rest } = input;
   const token = password ? null : crypto.randomBytes(24).toString('hex');
-  const user = await User.create({
+  const user = await createWithCode(async partnerCode => User.create({
     ...rest,
     email,
     role: 'partner',
     source,
-    partnerCode: await nextCode(User, 'partnerCode', 'MXP', 4, 1),
+    partnerCode,
     status: password ? 'active' : 'invited',
     passwordHash: password ? await hashPassword(password) : undefined,
     inviteToken: token ? hashToken(token) : undefined,
     inviteExpires: token ? new Date(Date.now() + 7 * 864e5) : undefined,
-  });
+  }));
 
   const appUrl = process.env.APP_URL || 'http://localhost:3000';
   return {
     user: publicUser(user),
     setPasswordUrl: token ? `${appUrl}/set-password?token=${token}` : null,
   };
+}
+
+// The next partner ID (MX-P-243-<n>). If two partners are created at the same moment and get the
+// same number, the unique index refuses the second one and it simply takes the next number.
+async function createWithCode<T>(create: (code: string) => Promise<T>) {
+  for (let attempt = 0; ; attempt++) {
+    const code = await nextCode(User, 'partnerCode', PARTNER_CODE_PREFIX, 0, 1);
+    try {
+      return await create(code);
+    } catch (e) {
+      const dup = (e as { code?: number; keyPattern?: Record<string, unknown> }).code === 11000 && (e as { keyPattern?: Record<string, unknown> }).keyPattern?.partnerCode;
+      if (!dup || attempt >= 4) throw e;
+    }
+  }
 }
 
 export function publicUser(u: Record<string, unknown> & { _id: unknown; toObject?: () => Record<string, unknown> }) {
